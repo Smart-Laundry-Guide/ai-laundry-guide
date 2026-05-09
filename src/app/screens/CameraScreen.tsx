@@ -4,13 +4,15 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { useState, useRef } from 'react';
+import { compressImageToBase64 } from '../utils/imageUtils';
 
 export function CameraScreen() {
   const navigate = useNavigate();
 
   // 의류 이미지
   const [clothingFile, setClothingFile]       = useState<File | null>(null);
-  const [clothingPreview, setClothingPreview] = useState<string | null>(null);
+  const [clothingPreview, setClothingPreview] = useState<string | null>(null); // 화면 표시용 object URL
+  const [clothingBase64, setClothingBase64]   = useState<string | null>(null); // 저장/전달용 base64
 
   // 라벨 추가 정보
   const [labelType, setLabelType]     = useState<'symbol' | 'ocr' | null>(null);
@@ -35,12 +37,14 @@ export function CameraScreen() {
 
     if (target === 'clothing') {
       setClothingFile(file);
-      setClothingPreview(url);
+      setClothingPreview(url);            // 즉시 미리보기용
+      setClothingBase64(null);            // 이전 base64 초기화
+      // 백그라운드에서 압축 base64 생성 (저장·전달용)
+      compressImageToBase64(file).then(b64 => setClothingBase64(b64));
     } else {
       setLabelFile(file);
       setLabelPreview(url);
     }
-    // input 초기화 (같은 파일 재선택 허용)
     e.target.value = '';
   };
 
@@ -59,6 +63,7 @@ export function CameraScreen() {
   const clearClothing = () => {
     setClothingFile(null);
     setClothingPreview(null);
+    setClothingBase64(null);
   };
 
   const clearLabel = () => {
@@ -71,9 +76,10 @@ export function CameraScreen() {
     if (!clothingFile) return;
     navigate('/loading', {
       state: {
-        clothingFile:   clothingFile.name,   // 실제 연동 시 FormData로 전송
-        labelType:      labelFile ? labelType : null,
-        hasLabel:       !!labelFile,
+        clothingFile:    clothingFile.name,
+        clothingPreview: clothingBase64 ?? clothingPreview, // base64 우선, 없으면 object URL
+        labelType:       labelFile ? labelType : null,
+        hasLabel:        !!labelFile,
       },
     });
   };

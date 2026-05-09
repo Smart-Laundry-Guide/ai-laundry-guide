@@ -163,11 +163,6 @@ export function StainRemovalScreen() {
         </h1>
       </div>
 
-      {/* Subtitle */}
-      <p className="px-6 text-[#6b7688] mb-4" style={{ fontSize: '14px' }}>
-        얼룩 종류를 선택하면 제거 방법을 알려드려요
-      </p>
-
       {/* Tip banner */}
       <div
         className="mx-6 mb-5 rounded-2xl px-4 py-3.5 flex items-start gap-3"
