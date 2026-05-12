@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router';
+import { BottomNav } from '../components/BottomNav';
 
 const stains = [
   {
@@ -149,7 +150,7 @@ export function StainRemovalScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafb] pb-8">
+    <div className="min-h-screen bg-[#f8fafb] pb-24">
       {/* Header */}
       <div className="px-6 pt-12 pb-5 flex items-center">
         <Link to="/" className="mr-4">
@@ -288,6 +289,7 @@ export function StainRemovalScreen() {
           );
         })}
       </div>
+      <BottomNav />
     </div>
   );
 }

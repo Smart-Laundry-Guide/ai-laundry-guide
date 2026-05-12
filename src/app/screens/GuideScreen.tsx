@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router';
 import { SymbolIcon } from '../components/LaundrySymbols';
+import { BottomNav } from '../components/BottomNav';
 
 type TabType = 'wash' | 'squeeze' | 'bleach' | 'natural_dry' | 'machine_dry' | 'iron' | 'dryclean';
 
@@ -130,7 +131,7 @@ export function GuideScreen() {
   const currentTabInfo = TABS.find(t => t.id === activeTab)!;
 
   return (
-    <div className="min-h-screen bg-[#f8fafb] pb-10">
+    <div className="min-h-screen bg-[#f8fafb] pb-24">
       {/* 헤더 */}
       <div className="bg-white px-6 pt-12 pb-4 flex items-center"
         style={{ borderBottom: '1px solid #eef1f5' }}>
@@ -205,6 +206,7 @@ export function GuideScreen() {
           </div>
         ))}
       </div>
+      <BottomNav />
     </div>
   );
 }

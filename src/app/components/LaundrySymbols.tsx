@@ -84,7 +84,7 @@ function NatDrySymbol({ hang, shade, clipId, className }:
   );
 }
 
-// ── 탈수: interlocking 타원 3개 ���─────────────────────────────────────────────
+// ── 탈수
 function SqueezeBase() {
   return (
     <>
@@ -128,7 +128,7 @@ export function SymbolIcon({ code, className = 'w-full h-full' }: { code: string
     </svg>
   );
 
-  // ── 물세탁 금지 (물결 없음) ──────────────────────────────────────────────────
+  // ── 물세탁 금지 ──────────────────────────────────────────────────
   if (code === 'wash_no') return (
     <svg {...p}>
       <path d={TUB} stroke={S} strokeWidth={SW} fill="none" strokeLinecap="round" strokeLinejoin="round"/>
@@ -136,7 +136,7 @@ export function SymbolIcon({ code, className = 'w-full h-full' }: { code: string
     </svg>
   );
 
-  // ── 손세탁: 온도 + 물결 1줄 ─────────────────────────────────────────────────
+  // ── 손세탁 ─────────────────────────────────────────────────
   if (code === 'hand_40') return (
     <svg {...p}>
       <path d={TUB} stroke={S} strokeWidth={SW} fill="none" strokeLinecap="round" strokeLinejoin="round"/>
@@ -188,7 +188,7 @@ export function SymbolIcon({ code, className = 'w-full h-full' }: { code: string
     </svg>
   );
 
-  // ── 건조기 (정사각형 + 원) ────────────────────────────────────────────────────
+  // ── 건조기 ────────────────────────────────────────────────────
   if (code === 'machine_dry_60') return (
     <svg {...p}>
       {SQ}

@@ -34,9 +34,13 @@ export interface AnalysisApiResponse {
    *          'tumble_dry' | 'no_tumble_dry' |
    *          'natural_dry' | 'iron' | 'no_iron' |
    *          'dry_clean' | 'no_dry_clean' |
-   *          'squeeze' | 'no_squeeze'
+   *          'squeeze' | 'no_squeeze' | 'flame_warning'
+   * subclass: YOLO 탐지 후 OCR로 확정한 세부 분류 (없으면 null)
+   *   ex) machine_wash → '30℃ 약하게 세탁'
+   *       dry_clean    → '석유계 드라이클리닝'
+   *       iron         → '중온 다림질 (160℃)'
    */
-  symbols?: { cls: string; confidence: number }[];
+  symbols?: { cls: string; confidence: number; subclass?: string | null }[];
 
   /** [OCR 모드] 라벨 텍스트 인식 결과 */
   ocrResult?: {
@@ -61,10 +65,10 @@ const MOCK_SYMBOL: AnalysisApiResponse = {
     { cls: 'T_shirt', confidence: 0.74 },
   ],
   symbols: [
-    { cls: 'hand_wash',     confidence: 0.95 },
-    { cls: 'no_tumble_dry', confidence: 0.92 },
-    { cls: 'no_bleach',     confidence: 0.88 },
-    { cls: 'iron',          confidence: 0.80 },
+    { cls: 'hand_wash',     confidence: 0.95, subclass: '30℃ 손세탁' },
+    { cls: 'no_tumble_dry', confidence: 0.92, subclass: null },
+    { cls: 'no_bleach',     confidence: 0.88, subclass: null },
+    { cls: 'iron',          confidence: 0.80, subclass: '중온 다림질 (160℃)' },
   ],
   // TODO: 모델이 요약 문장을 직접 생성하면 아래 필드로 전달하세요.
   // modelSummary: '니트 소재로 확인됩니다. 30°C 이하 찬물에서 손세탁하고 ...',

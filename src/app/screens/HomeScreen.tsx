@@ -319,7 +319,6 @@ export function HomeScreen() {
           </svg>
         </Link>
 
-        {/* Row 3: 2-column — 지난 분석 / 얼룩 제거 */}
         <div
           style={{
             display: "grid",

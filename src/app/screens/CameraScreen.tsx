@@ -37,8 +37,8 @@ export function CameraScreen() {
 
     if (target === 'clothing') {
       setClothingFile(file);
-      setClothingPreview(url);            // 즉시 미리보기용
-      setClothingBase64(null);            // 이전 base64 초기화
+      setClothingPreview(url);            
+      setClothingBase64(null);            
       // 백그라운드에서 압축 base64 생성 (저장·전달용)
       compressImageToBase64(file).then(b64 => setClothingBase64(b64));
     } else {
@@ -101,7 +101,6 @@ export function CameraScreen() {
   return (
     <div className="min-h-screen bg-white" style={{ paddingBottom: '40px' }}>
 
-      {/* ── 숨겨진 file inputs ── */}
       {/* 의류 — 카메라 */}
       <input
         ref={clothingCameraRef}
