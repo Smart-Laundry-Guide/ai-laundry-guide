@@ -1,6 +1,7 @@
 import { ArrowLeft, Shirt, Calendar, Filter, Trash2, ChevronRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { useState, useEffect } from 'react';
+import { BottomNav } from '../components/BottomNav';
 
 // ─── 타입 & 스토리지 ──────────────────────────────────────────────────────────
 export interface HistoryEntry {
@@ -89,9 +90,9 @@ function groupByMonth(items: HistoryEntry[]): { label: string; items: HistoryEnt
 
 // 분석 방식 뱃지 텍스트
 function analysisBadge(labelType?: string | null) {
-  if (labelType === 'symbol') return '🏷 기호';
-  if (labelType === 'ocr')    return '📝 OCR';
-  return '📷 의류';
+  if (labelType === 'symbol') return '라벨 기호';
+  if (labelType === 'ocr')    return '주의 문구';
+  return '의류 사진';
 }
 
 // ─── 컴포넌트 ─────────────────────────────────────────────────────────────────
@@ -349,6 +350,7 @@ export function HistoryScreen() {
           ))
         )}
       </div>
+      <BottomNav />
     </div>
   );
 }

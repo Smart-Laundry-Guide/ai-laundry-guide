@@ -364,7 +364,7 @@ export function HomeScreen() {
                   marginTop: "10px",
                 }}
               >
-                지난 분석
+                세탁 기록
               </p>
               <p
                 className="relative z-10"

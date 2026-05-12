@@ -408,11 +408,9 @@ export function ResultScreen() {
               <p className="text-[#1a2332]" style={{fontSize:'20px',fontWeight:700}}>{displayName}</p>
               <span className="inline-block mt-1.5 px-2.5 py-1 rounded-full"
                 style={{background:'#e3f4fb',color:'#1a5f7a',fontSize:'11px',fontWeight:600}}>
-                {readOnly
-                  ? '📋 기록 조회'
-                  : labelType==='symbol' ? '🏷 라벨 기호 분석'
-                  : labelType==='ocr'    ? '📝 주의 문구 분석'
-                  : '의류 사진만으로 분석'}
+                {labelType==='symbol' ? ' 라벨 기호 분석'
+                  : labelType==='ocr'    ? '주의 문구 분석'
+                  : '의류 사진 분석'}
               </span>
             </div>
           </div>

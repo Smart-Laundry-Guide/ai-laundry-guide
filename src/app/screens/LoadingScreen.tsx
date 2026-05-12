@@ -1,4 +1,4 @@
-import { Loader2, CheckCircle2, Shirt, ScanLine } from 'lucide-react';
+import { Loader2, CheckCircle2, Shirt } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { analyzeClothing } from '../services/analysisService';
@@ -34,7 +34,7 @@ export function LoadingScreen() {
 
   const mainTitle    = hasLabel ? '세탁 정보를 분석하고 있어요' : '의류를 분석하고 있어요';
   const subTitle     = hasLabel
-    ? '라벨과 의류 특징을 함께 확인 중입니다'
+    ? '라벨과 의류 특징을 함께 확인하고 있어요'
     : '의류를 꼼꼼히 살펴보고 있어요';
   const bottomInfo   = hasLabel
     ? '잠시만 기다려주세요. 초보자도 쉽게 이해할 수 있게 정리해드릴게요.'
@@ -97,86 +97,63 @@ export function LoadingScreen() {
         filter: 'blur(20px)', animation: 'bubbleFloat3 11s ease-in-out infinite',
       }} />
 
-      {/* ── 의류 사진 미리보기 (의류 전용 모드) ── */}
-      {!hasLabel && (
-        <div className="mb-7 relative z-10" style={{ animation: 'fadeInUp 0.5s ease' }}>
-          <div
-            className="relative rounded-3xl overflow-hidden"
-            style={{
-              width: '120px',
-              height: '120px',
-              boxShadow: '0 8px 32px rgba(135,206,235,0.35)',
-              border: '3px solid rgba(255,255,255,0.8)',
-            }}
-          >
+      {/* ── 의류 사진 미리보기 (모든 모드 공통) ── */}
+      <div className="mb-7 relative z-10" style={{ animation: 'fadeInUp 0.5s ease' }}>
+        <div
+          className="relative rounded-3xl overflow-hidden"
+          style={{
+            width: '120px',
+            height: '120px',
+            boxShadow: '0 8px 32px rgba(135,206,235,0.35)',
+            border: '3px solid rgba(255,255,255,0.8)',
+          }}
+        >
+          {clothingPreview ? (
             <img
-              src={clothingPreview ?? clothingDefaultImg}
+              src={clothingPreview}
               alt="분석 중인 의류"
               className="w-full h-full object-cover"
             />
-            {/* 스캔 오버레이 */}
-            <div
-              className="absolute inset-0"
-              style={{
-                background: 'linear-gradient(to bottom, transparent 0%, rgba(135,206,235,0.15) 50%, transparent 100%)',
-                animation: 'scanLine 2s ease-in-out infinite',
-              }}
-            />
-            {/* 코너 스캔 마커 */}
-            <div className="absolute top-2 left-2 w-4 h-4" style={{ borderTop: '2px solid #87CEEB', borderLeft: '2px solid #87CEEB', borderRadius: '2px' }} />
-            <div className="absolute top-2 right-2 w-4 h-4" style={{ borderTop: '2px solid #87CEEB', borderRight: '2px solid #87CEEB', borderRadius: '2px' }} />
-            <div className="absolute bottom-2 left-2 w-4 h-4" style={{ borderBottom: '2px solid #87CEEB', borderLeft: '2px solid #87CEEB', borderRadius: '2px' }} />
-            <div className="absolute bottom-2 right-2 w-4 h-4" style={{ borderBottom: '2px solid #87CEEB', borderRight: '2px solid #87CEEB', borderRadius: '2px' }} />
-          </div>
-          {/* AI 분석 뱃지 */}
-          <div
-            className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full flex items-center gap-1.5"
-            style={{
-              background: 'rgba(255,255,255,0.85)',
-              backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(135,206,235,0.4)',
-              boxShadow: '0 2px 8px rgba(135,206,235,0.2)',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <Shirt size={12} color="#87CEEB" strokeWidth={2} />
-            <span style={{ fontSize: '11px', fontWeight: 600, color: '#1a5f7a' }}>AI 분석 중</span>
-          </div>
-        </div>
-      )}
-
-      {/* ── 라벨 포함 모드: 기존 스피너 아이콘 ── */}
-      {hasLabel && (
-        <div className="mb-8 relative z-10">
-          <div className="relative">
-            <div
-              className="w-24 h-24 rounded-full flex items-center justify-center"
-              style={{
-                background: 'rgba(255,255,255,0.55)',
-                backdropFilter: 'blur(10px)',
-                boxShadow: '0 8px 32px rgba(135,206,235,0.25)',
-              }}
-            >
-              <ScanLine size={44} className="stroke-[#87CEEB]" strokeWidth={1.8} style={{ animation: 'scanIconPulse 2s ease-in-out infinite' }} />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center"
+              style={{ background: 'rgba(135,206,235,0.1)' }}>
+              <Shirt size={48} color="#87CEEB" strokeWidth={1.5} />
             </div>
-            <div
-              className="absolute -top-1 -right-1 w-8 h-8 rounded-full"
-              style={{ background: 'rgba(152,216,200,0.7)', animation: 'pulse 2s ease-in-out infinite' }}
-            />
-            <div
-              className="absolute -bottom-2 -left-2 w-6 h-6 rounded-full"
-              style={{ background: 'rgba(135,206,235,0.6)', animation: 'pulse 2s ease-in-out infinite 0.4s' }}
-            />
-          </div>
+          )}
+          {/* 스캔 오버레이 */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: 'linear-gradient(to bottom, transparent 0%, rgba(135,206,235,0.15) 50%, transparent 100%)',
+              animation: 'scanLine 2s ease-in-out infinite',
+            }}
+          />
+          {/* 코너 스캔 마커 */}
+          <div className="absolute top-2 left-2 w-4 h-4" style={{ borderTop: '2px solid #87CEEB', borderLeft: '2px solid #87CEEB', borderRadius: '2px' }} />
+          <div className="absolute top-2 right-2 w-4 h-4" style={{ borderTop: '2px solid #87CEEB', borderRight: '2px solid #87CEEB', borderRadius: '2px' }} />
+          <div className="absolute bottom-2 left-2 w-4 h-4" style={{ borderBottom: '2px solid #87CEEB', borderLeft: '2px solid #87CEEB', borderRadius: '2px' }} />
+          <div className="absolute bottom-2 right-2 w-4 h-4" style={{ borderBottom: '2px solid #87CEEB', borderRight: '2px solid #87CEEB', borderRadius: '2px' }} />
         </div>
-      )}
+        {/* AI 분석 뱃지 */}
+        <div
+          className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full flex items-center gap-1.5"
+          style={{
+            background: 'rgba(255,255,255,0.85)',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid rgba(135,206,235,0.4)',
+            boxShadow: '0 2px 8px rgba(135,206,235,0.2)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <Shirt size={12} color="#87CEEB" strokeWidth={2} />
+          <span style={{ fontSize: '11px', fontWeight: 600, color: '#1a5f7a' }}>AI 분석 중</span>
+        </div>
+      </div>
 
-      {/* ── 스피너 (의류 전용 하단) ── */}
-      {!hasLabel && (
-        <div className="mb-5 relative z-10">
-          <Loader2 size={30} className="stroke-[#87CEEB] animate-spin" strokeWidth={2} />
-        </div>
-      )}
+      {/* ── 스피너 ── */}
+      <div className="mb-5 relative z-10">
+        <Loader2 size={30} className="stroke-[#87CEEB] animate-spin" strokeWidth={2} />
+      </div>
 
       {/* ── Main Text ── */}
       <h2
@@ -272,10 +249,6 @@ export function LoadingScreen() {
           10%  { opacity: 1; }
           90%  { opacity: 1; }
           100% { transform: translateY(200%); opacity: 0; }
-        }
-        @keyframes scanIconPulse {
-          0%, 100% { opacity: 1; transform: scaleY(1); }
-          50%       { opacity: 0.6; transform: scaleY(0.9); }
         }
         @keyframes fadeInUp {
           from { opacity: 0; transform: translateY(16px); }
