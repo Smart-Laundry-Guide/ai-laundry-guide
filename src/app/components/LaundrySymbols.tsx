@@ -1,3 +1,6 @@
+import squeezeOkImg from 'figma:asset/image-20.png';
+import squeezeNoImg from 'figma:asset/image-20.png';
+
 // ─── 공통 세탁 기호 SVG 컴포넌트 ─────────────────────────────────────────────
 // symbol_code 체계:
 //   wash_30 / wash_40 / wash_60 / wash_no
@@ -64,8 +67,6 @@ function NatDrySymbol({ hang, shade, clipId, className }:
           <line x1="0"  y1="21" x2="21" y2="0"  stroke={S} strokeWidth="3"/>
           <line x1="0"  y1="28" x2="28" y2="0"  stroke={S} strokeWidth="3"/>
           <line x1="0"  y1="35" x2="35" y2="0"  stroke={S} strokeWidth="3"/>
-          <line x1="2"  y1="40" x2="40" y2="2"  stroke={S} strokeWidth="3"/>
-          <line x1="9"  y1="40" x2="40" y2="9"  stroke={S} strokeWidth="3"/>
         </g>
       )}
       <text
@@ -84,7 +85,7 @@ function NatDrySymbol({ hang, shade, clipId, className }:
   );
 }
 
-// ── 탈수
+// ── 탈수: interlocking 타원 3개 ���─────────────────────────────────────────────
 function SqueezeBase() {
   return (
     <>
@@ -127,16 +128,24 @@ export function SymbolIcon({ code, className = 'w-full h-full' }: { code: string
       <text x="20" y="26" textAnchor="middle" fontSize="11" fontWeight="800" fill={S} fontFamily="system-ui,sans-serif">60℃</text>
     </svg>
   );
+  if (code === 'wash_95') return (
+    <svg {...p}>
+      <rect x="4" y="4" width="32" height="32" rx="2" stroke={S} strokeWidth={SW} fill="none"/>
+      <circle cx="29" cy="11" r="2.5" stroke={S} strokeWidth="1.6" fill="none"/>
+      <text x="20" y="26" textAnchor="middle" fontSize="11" fontWeight="800" fill={S} fontFamily="system-ui,sans-serif">95℃</text>
+    </svg>
+  );
 
-  // ── 물세탁 금지 ──────────────────────────────────────────────────
+  // ── 물세탁 금지 ──────────────────────────────────────────────────────────────
   if (code === 'wash_no') return (
     <svg {...p}>
       <path d={TUB} stroke={S} strokeWidth={SW} fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      <TubWave y={30}/>
       {X_MARK(11, 11, 29, 32)}
     </svg>
   );
 
-  // ── 손세탁 ─────────────────────────────────────────────────
+  // ── 손세탁: 온도 + 물결 1줄 ─────────────────────────────────────────────────
   if (code === 'hand_40') return (
     <svg {...p}>
       <path d={TUB} stroke={S} strokeWidth={SW} fill="none" strokeLinecap="round" strokeLinejoin="round"/>
@@ -188,7 +197,7 @@ export function SymbolIcon({ code, className = 'w-full h-full' }: { code: string
     </svg>
   );
 
-  // ── 건조기 ────────────────────────────────────────────────────
+  // ── 건조기 (정사각형 + 원) ────────────────────────────────────────────────────
   if (code === 'machine_dry_60') return (
     <svg {...p}>
       {SQ}
@@ -280,15 +289,10 @@ export function SymbolIcon({ code, className = 'w-full h-full' }: { code: string
 
   // ── 탈수/짜기 ─────────────────────────────────────────────────────────────────
   if (code === 'squeeze_ok') return (
-    <svg {...p}>
-      <SqueezeBase/>
-    </svg>
+    <img src={squeezeOkImg} alt="약하게 탈수 가능" className={className} style={{ objectFit: 'contain' }}/>
   );
   if (code === 'squeeze_no') return (
-    <svg {...p}>
-      <SqueezeBase/>
-      {X_MARK(7, 13, 33, 27)}
-    </svg>
+    <img src={squeezeNoImg} alt="탈수 금지" className={className} style={{ objectFit: 'contain' }}/>
   );
 
   return null;
