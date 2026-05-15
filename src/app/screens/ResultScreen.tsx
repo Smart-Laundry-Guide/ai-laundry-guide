@@ -9,7 +9,7 @@ interface Candidate { cls: string; confidence: number; }
 interface OcrResult {
   care?: string[]; warning?: string[]; prohibitions?: string[]; materials?: string[];
 }
-interface SymbolResult { cls: string; confidence: number; subclass?: string | null; }
+interface SymbolResult { cls: string; confidence: number; }
 interface LocationState {
   fromAnalysis?: boolean;
   labelType?: 'symbol' | 'ocr' | null;
@@ -108,84 +108,19 @@ interface SymbolSel {
   natural_dry: NaturalDry; iron: IronSel; dryclean: DryCleanSel; squeeze: SqueezeSel;
 }
 
-// ── subclass 텍스트에서 키워드를 찾아 세부 값을 결정하는 헬퍼 ─────────────────
-function matchSub(sub: string | null | undefined, keywords: string[]): boolean {
-  if (!sub) return false;
-  return keywords.some(kw => sub.includes(kw));
-}
-
-// ── YOLO 탐지 결과 + subclass(OCR) → 앱 내부 선택 상태로 변환 ─────────────────
 function yoloToSel(yolo: SymbolResult[]): SymbolSel {
-  const map = new Map(yolo.map(x => [x.cls, x]));
-
-  // 세탁 방법
-  let wash: WashSel = null;
-  if (map.has('no_wash')) {
-    wash = 'no_wash';
-  } else if (map.has('hand_wash')) {
-    const sub = map.get('hand_wash')?.subclass;
-    wash = matchSub(sub, ['중성'])        ? 'hand_neutral'
-         : matchSub(sub, ['40'])          ? 'hand_40'
-         : 'hand_30'; // 기본값
-  } else if (map.has('machine_wash')) {
-    const sub = map.get('machine_wash')?.subclass;
-    wash = matchSub(sub, ['60', '70', '95']) ? 'machine_60'
-         : matchSub(sub, ['30'])             ? 'machine_30'
-         : 'machine_40'; // 기본값
-  }
-
-  // 표백
-  const bleach: BleachSel =
-    map.has('no_bleach') ? 'cl_no' :
-    map.has('bleach')    ? 'cl_ok' : null;
-
-  // 건조기
-  let machine_dry: MachineDry = null;
-  if (map.has('no_tumble_dry')) {
-    machine_dry = 'no';
-  } else if (map.has('tumble_dry')) {
-    const sub = map.get('tumble_dry')?.subclass;
-    machine_dry = matchSub(sub, ['80']) ? 'ok_80' : 'ok_60';
-  }
-
-  // 자연건조
-  let natural_dry: NaturalDry = null;
-  if (map.has('natural_dry')) {
-    const sub = map.get('natural_dry')?.subclass;
-    natural_dry = matchSub(sub, ['뉘어', '평평']) && matchSub(sub, ['햇빛', '햇볕']) ? 'flat_sun'
-                : matchSub(sub, ['뉘어', '평평'])                                    ? 'flat_shade'
-                : matchSub(sub, ['햇빛', '햇볕'])                                    ? 'hang_sun'
-                : 'hang_shade'; // 기본값
-  }
-
-  // 다림질
-  let iron: IronSel = null;
-  if (map.has('no_iron')) {
-    iron = 'no';
-  } else if (map.has('iron')) {
-    const sub = map.get('iron')?.subclass;
-    iron = matchSub(sub, ['저온', '120']) ? 'low'
-         : matchSub(sub, ['고온', '210']) ? 'high'
-         : 'mid'; // 기본값 (중온 160°C)
-  }
-
-  // 드라이클리닝
-  let dryclean: DryCleanSel = null;
-  if (map.has('no_dry_clean')) {
-    dryclean = 'no';
-  } else if (map.has('dry_clean')) {
-    const sub = map.get('dry_clean')?.subclass;
-    dryclean = matchSub(sub, ['석유', '실리콘', '전문', '퍼클']) ? 'special'
-             : matchSub(sub, ['약'])                              ? 'gentle'
-             : 'ok'; // 기본값
-  }
-
-  // 탈수
-  const squeeze: SqueezeSel =
-    map.has('no_squeeze') ? 'no' :
-    map.has('squeeze')    ? 'ok' : null;
-
-  return { wash, bleach, machine_dry, natural_dry, iron, dryclean, squeeze };
+  const s = new Set(yolo.map(x => x.cls));
+  return {
+    wash:        s.has('no_wash')      ? 'no_wash'
+                :s.has('hand_wash')    ? 'hand_30'
+                :s.has('machine_wash') ? 'machine_40' : null,
+    bleach:      s.has('no_bleach') ? 'cl_no' : s.has('bleach') ? 'cl_ok' : null,
+    machine_dry: s.has('no_tumble_dry') ? 'no' : s.has('tumble_dry') ? 'ok_60' : null,
+    natural_dry: s.has('natural_dry') ? 'hang_shade' : null,
+    iron:        s.has('no_iron') ? 'no' : s.has('iron') ? 'mid' : null,
+    dryclean:    s.has('no_dry_clean') ? 'no' : s.has('dry_clean') ? 'ok' : null,
+    squeeze:     s.has('no_squeeze') ? 'no' : s.has('squeeze') ? 'ok' : null,
+  };
 }
 
 // ─── 가이드 행 생성 ────────────────────────────────────────────────────────────
@@ -410,6 +345,14 @@ export function ResultScreen() {
 
   const [selectedIdx,   setSelectedIdx]   = useState(0);
   const [showCorrection, setShowCorrection] = useState(false);
+  // 카테고리별 개별 접기/펼치기 — 초기에는 모두 닫혀 있음
+  const [openCats, setOpenCats] = useState<Set<string>>(new Set());
+  const toggleCat = (key: string) =>
+    setOpenCats(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
   const [symSel, setSymSel] = useState<SymbolSel>(() => {
     if (state.initialSymSel) return state.initialSymSel as SymbolSel;
     return yoloToSel(state.symbols ?? []);
@@ -473,9 +416,9 @@ export function ResultScreen() {
               <p className="text-[#1a2332]" style={{fontSize:'20px',fontWeight:700}}>{displayName}</p>
               <span className="inline-block mt-1.5 px-2.5 py-1 rounded-full"
                 style={{background:'#e3f4fb',color:'#1a5f7a',fontSize:'11px',fontWeight:600}}>
-                {labelType==='symbol' ? '🏷 라벨 기호 분석'
-                  : labelType==='ocr'    ? '📝 주의 문구 분석'
-                  : '📷 의류 사진 분석'}
+                {labelType==='symbol' ? '라벨 기호 분석'
+                  : labelType==='ocr'    ? '주의 문구 분석'
+                  : '의류 사진 분석'}
               </span>
             </div>
           </div>
@@ -579,43 +522,62 @@ export function ResultScreen() {
                     {CORRECTION_CATS.map(cat => {
                       const catVal = symSel[cat.key];
                       const hasSelection = catVal !== null;
+                      const isOpen = openCats.has(cat.key);
                       return (
                         <div key={cat.key} className="mb-6">
-                          <p className="text-[#8896a8] mb-3"
-                            style={{fontSize:'12px',fontWeight:700,letterSpacing:'0.4px'}}>
-                            {cat.label}
-                          </p>
-                          <div className="flex flex-wrap gap-2">
-                            {cat.options.map(opt => {
-                              const isActive   = catVal === opt.value;
-                              const isDisabled = hasSelection && !isActive;
-                              return (
-                                <button key={opt.value}
-                                  onClick={() => { if (!isDisabled) toggleSel(cat.key, opt.value); }}
-                                  className="flex items-center gap-2 pl-2.5 pr-2 py-2 rounded-xl border-2 transition-all"
-                                  style={{
-                                    borderColor: isActive ? '#87CEEB' : '#e5e9ef',
-                                    background:  isActive ? '#f0f9ff' : isDisabled ? '#f5f7fa' : 'white',
-                                    opacity:     isDisabled ? 0.4 : 1,
-                                    cursor:      isDisabled ? 'not-allowed' : 'pointer',
-                                  }}>
-                                  <div className="w-8 h-8 flex-shrink-0">
-                                    <SymbolIcon code={opt.code}/>
-                                  </div>
-                                  <span style={{
-                                    fontSize:'12px',fontWeight:600,
-                                    color: isActive ? '#1a5f7a' : isDisabled ? '#c0c8d4' : '#6b7688',
-                                  }}>
-                                    {opt.label}
-                                  </span>
-                                  {isActive && (
-                                    <Trash2 size={13} color="#ef4444" strokeWidth={2.5}
-                                      className="ml-1 flex-shrink-0"/>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
+                          {/* 카테고리 헤더: 클릭으로 접기/펼치기 */}
+                          <button
+                            onClick={() => toggleCat(cat.key)}
+                            className="w-full flex items-center justify-between mb-3">
+                            <span className="text-[#8896a8]"
+                              style={{
+                                fontSize:'12px', fontWeight:700, letterSpacing:'0.4px',
+                                color: isOpen ? '#87CEEB' : undefined,
+                              }}>
+                              {cat.label}
+                            </span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                              stroke={isOpen ? '#87CEEB' : '#8896a8'} strokeWidth="2.5"
+                              strokeLinecap="round" strokeLinejoin="round">
+                              {isOpen
+                                ? <polyline points="18 15 12 9 6 15"/>
+                                : <polyline points="6 9 12 15 18 9"/>}
+                            </svg>
+                          </button>
+                          {/* 기호 버튼 목록 */}
+                          {isOpen && (
+                            <div className="flex flex-wrap gap-2">
+                              {cat.options.map(opt => {
+                                const isActive   = catVal === opt.value;
+                                const isDisabled = hasSelection && !isActive;
+                                return (
+                                  <button key={opt.value}
+                                    onClick={() => { if (!isDisabled) toggleSel(cat.key, opt.value); }}
+                                    className="flex items-center gap-2 pl-2.5 pr-2 py-2 rounded-xl border-2 transition-all"
+                                    style={{
+                                      borderColor: isActive ? '#87CEEB' : '#e5e9ef',
+                                      background:  isActive ? '#f0f9ff' : isDisabled ? '#f5f7fa' : 'white',
+                                      opacity:     isDisabled ? 0.4 : 1,
+                                      cursor:      isDisabled ? 'not-allowed' : 'pointer',
+                                    }}>
+                                    <div className="w-8 h-8 flex-shrink-0">
+                                      <SymbolIcon code={opt.code}/>
+                                    </div>
+                                    <span style={{
+                                      fontSize:'12px',fontWeight:600,
+                                      color: isActive ? '#1a5f7a' : isDisabled ? '#c0c8d4' : '#6b7688',
+                                    }}>
+                                      {opt.label}
+                                    </span>
+                                    {isActive && (
+                                      <Trash2 size={13} color="#ef4444" strokeWidth={2.5}
+                                        className="ml-1 flex-shrink-0"/>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       );
                     })}

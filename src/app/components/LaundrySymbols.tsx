@@ -1,15 +1,12 @@
-import squeezeOkImg from 'figma:asset/image-20.png';
-import squeezeNoImg from 'figma:asset/image-20.png';
-
 // ─── 공통 세탁 기호 SVG 컴포넌트 ─────────────────────────────────────────────
 // symbol_code 체계:
-//   wash_30 / wash_40 / wash_60 / wash_no
+//   wash_30 / wash_40 / wash_60 / wash_95 / wash_no
 //   hand_40 / hand_30 / hand_neutral
 //   bleach_cl_ok / bleach_cl_no / bleach_ox_ok / bleach_ox_no
 //   machine_dry_60 / machine_dry_80 / machine_dry_no
 //   natural_hang_sun / natural_hang_shade / natural_flat_sun / natural_flat_shade
 //   iron_low / iron_mid / iron_high / iron_no
-//   dryclean_ok / dryclean_gentle / dryclean_special / dryclean_no
+//   dryclean_ok / dryclean_petroleum / dryclean_silicone / dryclean_special / dryclean_no
 //   squeeze_ok / squeeze_no
 
 const S  = '#1a2332';
@@ -93,6 +90,61 @@ function SqueezeBase() {
       <ellipse cx="20" cy="20" rx="7" ry="5.5" stroke={S} strokeWidth="2" fill="none"/>
       <ellipse cx="28" cy="20" rx="7" ry="5.5" stroke={S} strokeWidth="2" fill="none"/>
     </>
+  );
+}
+
+// ── 드라이클리닝 (한국형): 원 + 드라이 텍스트 + 물결 구분선 + 하단 내용 ────────
+// subtext: 석유계 | 실리콘계 | 전문점 | undefined(일반)
+// crossed: true → X 마크 (금지)
+function DrycleanKorean({
+  subtext,
+  crossed = false,
+  className,
+}: {
+  subtext?: string;
+  crossed?: boolean;
+  className: string;
+}) {
+  const hasSubtext = Boolean(subtext);
+
+  // '드라이' 텍스트 수직 위치 (dominantBaseline="middle" 기준)
+  const labelY = hasSubtext ? 14 : 17;
+  // 물결 구분선 y 기준
+  const divY   = hasSubtext ? 22 : 24;
+  // 하단 콘텐츠 y
+  const lowerY = 30;
+
+  // 물결 구분선: 원 내부를 가로지르는 2사이클 파형
+  const amp  = hasSubtext ? 2.5 : 3;
+  const divW = `M5.5,${divY} Q9,${divY - amp} 13,${divY} Q17,${divY + amp} 21,${divY} Q25,${divY - amp} 29,${divY} Q33,${divY + amp} 34.5,${divY}`;
+
+  return (
+    <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      {/* 원 테두리 */}
+      <circle cx="20" cy="20" r="15" stroke={S} strokeWidth={SW}/>
+
+      {/* 상단 '드라이' 레이블 */}
+      <text
+        x="20" y={labelY}
+        textAnchor="middle" dominantBaseline="middle"
+        fontSize={hasSubtext ? 8.5 : 9} fontWeight="800" fill={S}
+        fontFamily="system-ui, -apple-system, sans-serif"
+        style={{ letterSpacing: '-0.3px' }}
+      >
+        드라이
+      </text>
+
+      {/* 물결 구분선 */}
+      <path d={divW} stroke={S} strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+
+      {/* X 마크 (금지) */}
+      {crossed && (
+        <>
+          <line x1="9"  y1="9"  x2="31" y2="31" stroke={S} strokeWidth={SW + 0.5} strokeLinecap="round"/>
+          <line x1="31" y1="9"  x2="9"  y2="31" stroke={S} strokeWidth={SW + 0.5} strokeLinecap="round"/>
+        </>
+      )}
+    </svg>
   );
 }
 
@@ -260,39 +312,57 @@ export function SymbolIcon({ code, className = 'w-full h-full' }: { code: string
     </svg>
   );
 
-  // ── 드라이클리닝 ──────────────────────────────────────────────────────────────
-  if (code === 'dryclean_ok') return (
+  // ── 드라이클리닝 (한국형: 원 + '드라이' 텍스트 + 물결 구분선) ─────────────────
+  if (code === 'dryclean_ok')
+    return <DrycleanKorean className={className}/>;
+  if (code === 'dryclean_petroleum')
+    return <DrycleanKorean subtext="석유계"   className={className}/>;
+  if (code === 'dryclean_silicone')
+    return <DrycleanKorean subtext="실리콘계" className={className}/>;
+  if (code === 'dryclean_special')
+    return <DrycleanKorean subtext="전문점"   className={className}/>;
+  if (code === 'dryclean_no')
+    return <DrycleanKorean crossed={true}     className={className}/>;
+
+  // ── 탈수/짜기 (꼬아 짜는 모양 SVG) ───────────────────────────────────────────
+  // squeeze_ok: 꼬아 짜는 기호 + '약하게' 텍스트
+  if (code === 'squeeze_ok') return (
     <svg {...p}>
-      <circle cx="20" cy="20" r="15" stroke={S} strokeWidth={SW}/>
-      <text x="20" y="26" textAnchor="middle" fontSize="14" fontWeight="800" fill={S} fontFamily="system-ui,sans-serif">A</text>
+      <SqueezeBase/>
+      {/* '약', '하', '게'를 좌·중·우 타원 각각에 배치 */}
+      <text x="9"  y="21.5" textAnchor="middle" dominantBaseline="middle"
+        fontSize="6.5" fontWeight="800" fill={S} fontFamily="system-ui,sans-serif">약</text>
+      <text x="20" y="21.5" textAnchor="middle" dominantBaseline="middle"
+        fontSize="6.5" fontWeight="800" fill={S} fontFamily="system-ui,sans-serif">하</text>
+      <text x="31" y="21.5" textAnchor="middle" dominantBaseline="middle"
+        fontSize="6.5" fontWeight="800" fill={S} fontFamily="system-ui,sans-serif">게</text>
     </svg>
   );
-  if (code === 'dryclean_gentle') return (
+  // squeeze_no: 꼬아 짜는 기호 + X 마크
+  if (code === 'squeeze_no') return (
     <svg {...p}>
-      <circle cx="20" cy="20" r="15" stroke={S} strokeWidth={SW}/>
-      <text x="20" y="26" textAnchor="middle" fontSize="14" fontWeight="800" fill={S} fontFamily="system-ui,sans-serif">F</text>
-      <line x1="10" y1="33" x2="30" y2="33" stroke={S} strokeWidth="1.5"/>
-    </svg>
-  );
-  if (code === 'dryclean_special') return (
-    <svg {...p}>
-      <circle cx="20" cy="20" r="15" stroke={S} strokeWidth={SW}/>
-      <text x="20" y="26" textAnchor="middle" fontSize="14" fontWeight="800" fill={S} fontFamily="system-ui,sans-serif">S</text>
-    </svg>
-  );
-  if (code === 'dryclean_no') return (
-    <svg {...p}>
-      <circle cx="20" cy="20" r="15" stroke={S} strokeWidth={SW}/>
-      {X_MARK(10, 10, 30, 30)}
+      <SqueezeBase/>
+      <line x1="6"  y1="12" x2="34" y2="28" stroke={S} strokeWidth={SW} strokeLinecap="round"/>
+      <line x1="34" y1="12" x2="6"  y2="28" stroke={S} strokeWidth={SW} strokeLinecap="round"/>
     </svg>
   );
 
-  // ── 탈수/짜기 ─────────────────────────────────────────────────────────────────
-  if (code === 'squeeze_ok') return (
-    <img src={squeezeOkImg} alt="약하게 탈수 가능" className={className} style={{ objectFit: 'contain' }}/>
-  );
-  if (code === 'squeeze_no') return (
-    <img src={squeezeNoImg} alt="탈수 금지" className={className} style={{ objectFit: 'contain' }}/>
+  // ── 기타: 화기주의 ────────────────────────────────────────────────────────────
+  if (code === 'flame_warning') return (
+    <svg {...p}>
+      {/* 외부 불꽃 */}
+      <path
+        d="M20,35 C13,35 7,28 7,22 C7,15 12,10 15,5 C14,12 17,15 17,20 C17,13 19,4 20,4 C21,4 23,13 23,20 C23,15 26,12 25,5 C28,10 33,15 33,22 C33,28 27,35 20,35Z"
+        stroke={S} strokeWidth={SW} fill="none" strokeLinejoin="round" strokeLinecap="round"
+      />
+      {/* 내부 작은 불꽃 (물방울 형태) */}
+      <path
+        d="M20,30 C18,30 16,27 17,24 C17,21 19,18 20,16 C21,18 23,21 23,24 C24,27 22,30 20,30Z"
+        stroke={S} strokeWidth="1.6" fill="none" strokeLinejoin="round" strokeLinecap="round"
+      />
+      {/* 금지 X 마크 */}
+      {X_MARK(8, 8, 32, 32)}
+    </svg>
   );
 
   return null;

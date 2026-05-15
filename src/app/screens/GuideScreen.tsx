@@ -4,7 +4,7 @@ import { Link } from 'react-router';
 import { SymbolIcon } from '../components/LaundrySymbols';
 import { BottomNav } from '../components/BottomNav';
 
-type TabType = 'wash' | 'squeeze' | 'bleach' | 'natural_dry' | 'machine_dry' | 'iron' | 'dryclean';
+type TabType = 'wash' | 'squeeze' | 'bleach' | 'natural_dry' | 'machine_dry' | 'iron' | 'dryclean' | 'other';
 
 interface SymbolEntry {
   code: string; name: string; description: string; tip: string;
@@ -12,25 +12,25 @@ interface SymbolEntry {
 
 const SYMBOLS: Record<TabType, SymbolEntry[]> = {
   wash: [
-    { code: 'wash_30', name: '일반 세탁 (30°C 이하)',
+    { code: 'wash_30', name: '세탁기 세탁 (30°C 이하)',
       description: '최대 30°C의 찬물로 세탁기 세탁이 가능합니다.',
       tip: '울·섬세 코스를 권장합니다. 중성세제를 사용하면 더 안전해요.' },
-    { code: 'wash_40', name: '일반 세탁 (40~50°C)',
+    { code: 'wash_40', name: '세탁기 세탁 (40~50°C)',
       description: '최대 40~50°C의 미온수로 세탁기 세탁이 가능합니다.',
       tip: '표준 코스로 세탁할 수 있어요.' },
-    { code: 'wash_60', name: '일반 세탁 (60°C)',
+    { code: 'wash_60', name: '세탁기 세탁 (60°C 이상)',
       description: '60°C 이상의 뜨거운 물로 세탁기 세탁이 가능합니다.',
       tip: '면·린넨 등 열에 강한 소재에 적합합니다.' },
-    { code: 'wash_95', name: '일반 세탁 (95°C 이상)',
+    { code: 'wash_95', name: '세탁기 세탁 (95°C)',
       description: '95°C의 매우 뜨거운 물로 세탁기 세탁이 가능합니다.',
       tip: '흰 면 소재나 위생 세탁이 필요한 의류에 사용합니다. 대부분의 소재에는 사용하지 마세요.' },
-    { code: 'hand_30', name: '손세탁 (30°C)',
+    { code: 'hand_30', name: '손세탁 (30°C 이하)',
       description: '최대 30°C의 찬물로 손세탁해야 합니다. 세탁기 사용 불가.',
       tip: '니트·실크 등 섬세한 소재에 많이 표시됩니다.' },
-    { code: 'hand_40', name: '손세탁 (40°C)',
+    { code: 'hand_40', name: '손세탁 (40°C 이하)',
       description: '최대 40°C에서 손으로 부드럽게 세탁해야 합니다. 세탁기 사용 불가.',
       tip: '비틀어 짜거나 탈수기 사용은 피해 주세요.' },
-    { code: 'hand_neutral', name: '약하게 손세탁 (중성세제)',
+    { code: 'hand_neutral', name: '손세탁 (중성세제)',
       description: '중성세제를 사용하여 손세탁해야 합니다.',
       tip: '중성세제는 울샴푸·핸드워시 등 pH 중성 제품을 말해요.' },
     { code: 'wash_no', name: '물세탁 금지',
@@ -38,7 +38,7 @@ const SYMBOLS: Record<TabType, SymbolEntry[]> = {
       tip: '임의로 물세탁하면 수축, 변색, 변형이 생길 수 있어요.' },
   ],
   squeeze: [
-    { code: 'squeeze_ok', name: '약하게 짜기',
+    { code: 'squeeze_ok', name: '약하게 탈수 가능',
       description: '손으로 짜는 경우 약하게, 원심 탈수기는 짧은 시간만 사용합니다.',
       tip: '강한 탈수는 섬유를 손상시킬 수 있어요.' },
     { code: 'squeeze_no', name: '탈수 금지',
@@ -78,10 +78,10 @@ const SYMBOLS: Record<TabType, SymbolEntry[]> = {
 
   // ── 건조기 ──────────────────────────────────────────────────────────────────
   machine_dry: [
-    { code: 'machine_dry_60', name: '건조기 사용 가능 (60°C)',
+    { code: 'machine_dry_60', name: '건조기 사용 가능 (60°C 이하)',
       description: '60°C를 초과하지 않는 온도에서 건조기를 사용할 수 있습니다.',
       tip: '살짝 덜 건조된 상태에서 꺼내면 수축을 줄일 수 있어요.' },
-    { code: 'machine_dry_80', name: '건조기 사용 가능 (80°C)',
+    { code: 'machine_dry_80', name: '건조기 사용 가능 (80°C 이하)',
       description: '80°C를 초과하지 않는 온도에서 건조기를 사용할 수 있습니다.',
       tip: '면·린넨 등 열에 강한 소재에 주로 허용됩니다.' },
     { code: 'machine_dry_no', name: '건조기 사용 금지',
@@ -90,13 +90,13 @@ const SYMBOLS: Record<TabType, SymbolEntry[]> = {
   ],
 
   iron: [
-    { code: 'iron_low', name: '저온 다림질 (120°C)',
+    { code: 'iron_low', name: '저온 다림질 (120°C 이하)',
       description: '다리미 온도를 최대 120°C로 설정하여 다림질합니다.',
       tip: '아크릴·나일론 등 열에 약한 합성섬유에 적합합니다.' },
-    { code: 'iron_mid', name: '중온 다림질 (160°C)',
+    { code: 'iron_mid', name: '중온 다림질 (160°C 이하)',
       description: '다리미 온도를 최대 160°C로 설정하여 다림질합니다.',
       tip: '폴리에스터·울 혼방 소재에 적합합니다.' },
-    { code: 'iron_high', name: '고온 다림질 (210°C)',
+    { code: 'iron_high', name: '고온 다림질 (210°C 이하)',
       description: '다리미 온도를 최대 210°C로 설정하여 다림질합니다.',
       tip: '면·린넨 소재에 적합합니다.' },
     { code: 'iron_no', name: '다림질 금지',
@@ -104,18 +104,26 @@ const SYMBOLS: Record<TabType, SymbolEntry[]> = {
       tip: '스팀다리미도 사용하지 마세요.' },
   ],
   dryclean: [
-    { code: 'dryclean_ok', name: '드라이클리닝 가능',
+    { code: 'dryclean_ok',        name: '드라이클리닝 가능',
       description: '다양한 용제를 사용하는 일반 드라이클리닝이 가능합니다.',
-      tip: '세탁소에 라벨을 직접 보여주세요.' },
-    { code: 'dryclean_gentle', name: '드라이클리닝 약하게',
-      description: '약한 방법으로 드라이클리닝해야 합니다.',
-      tip: '세탁소에 "약하게" 처리 요청을 해주세요.' },
-    { code: 'dryclean_special', name: '특수 전문점 드라이클리닝',
-      description: '가죽·모피·헤어 등을 전문적으로 취급하는 전문점에서만 가능합니다.',
-      tip: '일반 세탁소에는 맡기지 마세요.' },
-    { code: 'dryclean_no', name: '드라이클리닝 금지',
-      description: '드라이클리닝이 불가합니다.',
-      tip: '물세탁 또는 손세탁 기호를 확인하세요.' },
+      tip: '어떤 용제든 사용 가능하므로 일반 세탁소에서 처리 가능합니다.' },
+    { code: 'dryclean_petroleum', name: '석유계 드라이클리닝',
+      description: '석유계 용제를 사용하여 드라이클리닝해야 합니다.',
+      tip: '세탁소에 "석유계" 처리 요청을 해주세요.' },
+    { code: 'dryclean_silicone',  name: '실리콘계 드라이클리닝',
+      description: '실리콘계 용제를 사용하여 드라이클리닝해야 합니다.',
+      tip: '세탁소에 "실리콘계" 처리 요청을 해주세요.' },
+    { code: 'dryclean_special',   name: '전문점 드라이클리닝',
+      description: '가죽, 모피, 앙고라 등 특수 소재를 전문적으로 취급하는 전문점에서만 세탁 가능합니다.',
+      tip: '가죽·모피 전문 세탁소에 소재를 알려주고 맡기세요.' },
+    { code: 'dryclean_no',        name: '드라이클리닝 금지',
+      description: '드라이클리닝을 할 수 없습니다.',
+      tip: '물세탁 등 다른 방법을 확인하세요.' },
+  ],
+  other: [
+    { code: 'flame_warning', name: '화기주의',
+      description: '불꽃이나 강한 열기에 가까이 할 경우 옷감이 쉽게 불에 타거나 녹아내릴 위험이 있습니다.',
+      tip: '겨울철 난로, 캠핑장 화로, 가스레인지 등 화기 근처에서 착용 시 각별한 주의가 필요해요.' },
   ],
 };
 
@@ -127,6 +135,7 @@ const TABS: { id: TabType; label: string; emoji: string }[] = [
   { id: 'machine_dry', label: '건조기',  emoji: '🌀' },
   { id: 'iron',        label: '다림질',  emoji: '♨️' },
   { id: 'dryclean',    label: '드라이',  emoji: '✨' },
+  { id: 'other',       label: '기타',    emoji: '⚠️' },
 ];
 
 export function GuideScreen() {
