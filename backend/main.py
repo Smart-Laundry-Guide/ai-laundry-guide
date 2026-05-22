@@ -2,6 +2,7 @@
 from fastapi.middleware.cors import CORSMiddleware
 from services import database
 import os
+import sqlite3
 
 # 파이프라인 함수 불러오기
 from pipeline import run_pipeline 
@@ -71,3 +72,37 @@ async def analyze_laundry(
         "message": "AI 분석 완료",
         "data": ai_result
     }
+
+@app.get("/records", summary="세탁 기록 목록 조회")
+async def get_laundry_records():
+    """
+    DB에 저장된 사용자의 세탁 분석 기록을 최신순으로 불러옵니다.
+    """
+    try:
+        # DB 연결 (기존에 생성된 파일 이름과 동일해야 합니다)
+        conn = sqlite3.connect("laundry_records.db")
+        conn.row_factory = sqlite3.Row  # 결과를 딕셔너리 형태로 받기 위함
+        cursor = conn.cursor()
+        
+        # 테이블에서 모든 데이터를 최신순(id 역순)으로 조회
+        # (만약 테이블 이름이 다르면 에러가 날 수 있으니 확인이 필요합니다!)
+        cursor.execute("SELECT * FROM records ORDER BY id DESC")
+        rows = cursor.fetchall()
+        
+        # 데이터를 JSON 리스트 형태로 변환
+        records_list = [dict(row) for row in rows]
+        
+        return {
+            "status": "success",
+            "message": "세탁 기록을 성공적으로 불러왔습니다.",
+            "data": records_list
+        }
+        
+    except sqlite3.Error as e:
+        return {
+            "status": "error",
+            "message": f"DB 조회 중 오류 발생: {e}"
+        }
+    finally:
+        if conn:
+            conn.close()
