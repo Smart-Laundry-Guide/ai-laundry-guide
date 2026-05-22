@@ -30,12 +30,14 @@ def _load_ocr():
             lang="korean",
             use_doc_orientation_classify=False,
             use_doc_unwarping=False,
-            use_textline_orientation=False
+            use_textline_orientation=False,
+            enable_mkldnn=False
         )
     except TypeError:
         # 혹시 버전 차이로 위 옵션이 안 먹을 때 대비
         _ocr = PaddleOCR(
-            lang="korean"
+            lang="korean",
+            enable_mkldnn=False
         )
 
     return _ocr
