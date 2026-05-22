@@ -1,9 +1,13 @@
 ﻿from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from services import database
+import os
+
+# 파이프라인 함수 불러오기
+from pipeline import run_pipeline 
+
 app = FastAPI()
 
-# 프론트엔드 연결 허용 설정
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
@@ -12,36 +16,58 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+os.makedirs("temp_images", exist_ok=True)
+
 @app.post("/analyze")
 async def analyze_laundry(
     clothingImage: UploadFile = File(...),
     labelType: str = Form(...),
     labelImage: UploadFile = File(None)
 ):
-    """AI 모델이 완성되기 전, 프론트엔드 테스트를 위한 가짜(Mock) 응답"""
+    # 1. 프론트엔드에서 보낸 사진을 인공지능이 읽을 수 있게 바이트(bytes)로 변환
+    clothing_bytes = await clothingImage.read()
+    
+    label_bytes = None
+    if labelImage is not None:
+        label_bytes = await labelImage.read()
 
-    symbols_data = ["machine_wash", "no_bleach"] if labelType == "symbol" else None
-    ocr_data = {
-        "materials": ["폴리에스터 65%", "면 35%"],
-        "care": ["뒤집어서 세탁하십시오"]
-    } if labelType == "ocr" else None
+    # 2. AI 파이프라인 실행
+    try:
+        ai_result = run_pipeline(
+            clothing_bytes=clothing_bytes, 
+            label_bytes=label_bytes, 
+            label_type=labelType
+        )
+    except Exception as e:
+        return {"status": "error", "message": f"AI 분석 중 오류 발생: {str(e)}"}
 
-    mock_result = {
-        "cloth_type": "knit",
-        "confidence": 0.95,
-        "risk_level": "고위험군",
-        "wash_method": "30℃ 손세탁",
-        "dry_method": "그늘에 뉘어서 건조",
-        "caution": "물빠짐 주의",
-        "symbols": symbols_data,
-        "ocr_result": ocr_data
+    # 3. DB에 저장하기 위한 데이터 가공 (가장 확률 높은 옷 종류 뽑기)
+    top_candidates = ai_result.get("topCandidates", [])
+    top_cls = top_candidates[0].get("cls", "unknown") if top_candidates else "unknown"
+    top_conf = top_candidates[0].get("confidence", 0.0) if top_candidates else 0.0
+    
+    db_record = {
+        "cloth_type": top_cls,
+        "confidence": top_conf,
+        "symbols": ai_result.get("symbols"),
+        "ocr_result": ai_result.get("ocrResult"),
+        "wash_method": ai_result.get("modelSummary"), # 요약본을 임시로 세탁법 칸에 저장
+        "dry_method": None,
+        "caution": None,
+        "risk_level": None
     }
 
-    # DB 저장 (경로는 임시)
-    database.save_record(mock_result, f"/images/dummy_{clothingImage.filename}")
+    # 이미지를 temp_images 폴더에 실제로 저장 (경로 생성)
+    save_path = f"temp_images/real_{clothingImage.filename}"
+    with open(save_path, "wb") as f:
+        f.write(clothing_bytes)
+        
+    # DB에 기록 저장
+    database.save_record(db_record, save_path)
 
+    # 4. 프론트엔드에 진짜 분석 결과 반환
     return {
         "status": "success",
-        "message": "AI 분석 완료 (임시 데이터)",
-        "data": mock_result
+        "message": "AI 분석 완료",
+        "data": ai_result
     }

@@ -28,7 +28,7 @@ def init_db():
 def save_record(data: dict, image_path: str):
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
-
+    
     symbols_json = json.dumps(data.get("symbols")) if data.get("symbols") else None
     ocr_result_json = json.dumps(data.get("ocr_result"), ensure_ascii=False) if data.get("ocr_result") else None
     now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
