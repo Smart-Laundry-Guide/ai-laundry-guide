@@ -1,0 +1,21 @@
+# --- FastAPI & 서버 통신 ---
+fastapi
+uvicorn
+python-multipart
+
+# --- 딥러닝 베이스 ---
+torch
+torchvision
+
+# --- 이미지 분석 AI (세탁 라벨 & OCR) ---
+ultralytics
+paddlepaddle
+paddleocr
+
+# --- 기본 이미지 처리 (AI 사용 시 거의 필수) ---
+opencv-python
+Pillow
+
+# --- 챗봇 및 보안 (API 키 관리) ---
+anthropic
+python-dotenv
