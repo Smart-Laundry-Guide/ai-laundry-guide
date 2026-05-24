@@ -205,3 +205,8 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Custom Project Files
+#  Ignore local databases and temporary user uploads to prevent conflicts and protect privacy.
+laundry_records.db
+temp_images/
