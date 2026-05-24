@@ -11,6 +11,7 @@ export function LoadingScreen() {
   const state = (location.state ?? {}) as {
     hasLabel?: boolean;
     clothingPreview?: string | null;
+    labelPreview?: string | null;
     labelType?: 'symbol' | 'ocr' | null;
   };
 
@@ -50,6 +51,7 @@ export function LoadingScreen() {
     const apiCall    = analyzeClothing({
       labelType:      state.labelType ?? null,
       clothingImage:  state.clothingPreview ?? null,
+      labelImage:     state.labelPreview ?? null,
     });
 
     Promise.all([uiDelay, apiCall]).then(([, result]) => {

@@ -11,7 +11,7 @@
 
 // ── 1. API 엔드포인트 설정 ────────────────────────────────────────────────────
 // TODO: 실제 서버 주소로 교체하세요
-const API_BASE_URL = 'https://your-api-server.example.com';
+const API_BASE_URL = 'http://localhost:8000';
 
 // ── 2. 요청 타입 ──────────────────────────────────────────────────────────────
 export interface AnalysisRequest {
@@ -102,20 +102,27 @@ export async function analyzeClothing(
 ): Promise<AnalysisApiResponse> {
 
   // ── 실제 API 호출 (연동 시 아래 블록 주석 해제) ────────────────────────────
-  /*
   const formData = new FormData();
   formData.append('labelType', req.labelType ?? 'none');
 
-  if (req.clothingImage instanceof File) {
-    formData.append('clothingImage', req.clothingImage);
-  } else if (typeof req.clothingImage === 'string') {
-    formData.append('clothingImageBase64', req.clothingImage);
+  if (req.clothingImage) {
+    if (req.clothingImage instanceof File) {
+      formData.append('clothingImage', req.clothingImage);
+    } else if (typeof req.clothingImage === 'string') {
+      const res = await fetch(req.clothingImage);
+      const blob = await res.blob();
+      formData.append('clothingImage', blob, 'clothing_image.jpg');
+    }
   }
 
-  if (req.labelImage instanceof File) {
-    formData.append('labelImage', req.labelImage);
-  } else if (typeof req.labelImage === 'string') {
-    formData.append('labelImageBase64', req.labelImage);
+  if (req.labelImage) {
+    if (req.labelImage instanceof File) {
+      formData.append('labelImage', req.labelImage);
+    } else if (typeof req.labelImage === 'string') {
+      const res = await fetch(req.labelImage);
+      const blob = await res.blob();
+      formData.append('labelImage', blob, 'label_image.jpg');
+    }
   }
 
   const response = await fetch(`${API_BASE_URL}/analyze`, {
@@ -128,8 +135,10 @@ export async function analyzeClothing(
     throw new Error(`분석 서버 오류: ${response.status}`);
   }
 
-  return response.json() as Promise<AnalysisApiResponse>;
-  */
+  const jsonResponse = await response.json();
+  // ⭐️ 이 줄을 추가해서 서버의 진짜 응답을 확인해 보세요!
+  console.log("백엔드가 준 찐 데이터:", jsonResponse);
+  return jsonResponse.data as AnalysisApiResponse;
 
   // ── 목(Mock) 응답 반환 — 연동 후 이 블록을 제거하세요 ──────────────────────
   await new Promise(r => setTimeout(r, 200)); // 네트워크 지연 시뮬레이션

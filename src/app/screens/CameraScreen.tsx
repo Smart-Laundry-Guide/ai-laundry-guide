@@ -78,6 +78,7 @@ export function CameraScreen() {
       state: {
         clothingFile:    clothingFile.name,
         clothingPreview: clothingBase64 ?? clothingPreview, // base64 우선, 없으면 object URL
+        labelPreview:    labelPreview,
         labelType:       labelFile ? labelType : null,
         hasLabel:        !!labelFile,
       },
