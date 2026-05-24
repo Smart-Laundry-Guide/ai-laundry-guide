@@ -1,7 +1,10 @@
 ﻿from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from services.database import init_db, save_record, get_all_records
+from pydantic import BaseModel
+from services.chatbot import get_claude_response
 import os
+from datetime import datetime
 
 # 파이프라인 함수 불러오기
 from pipeline import run_pipeline 
@@ -43,7 +46,7 @@ async def analyze_laundry(
     except Exception as e:
         return {"status": "error", "message": f"AI 분석 중 오류 발생: {str(e)}"}
 
-    # DB 저장을 위한 데이터 가공
+    # --- 1. DB 저장을 위한 데이터 가공 ---
     top_candidates = ai_result.get("topCandidates", [])
     top_cls = top_candidates[0].get("cls", "unknown") if top_candidates else "unknown"
     top_conf = top_candidates[0].get("confidence", 0.0) if top_candidates else 0.0
@@ -53,11 +56,15 @@ async def analyze_laundry(
     with open(save_path, "wb") as f:
         f.write(clothing_bytes)
 
+    # labelType에 따라 DB에 들어갈 JSON 값 확실히 분리하기
+    db_symbols = ai_result.get("symbols") if labelType == "symbol" else None
+    db_ocr = ai_result.get("ocrResult") if labelType == "ocr" else None
+
     db_record = {
         "cloth_type": top_cls,
         "confidence": top_conf,
-        "symbols": ai_result.get("symbols"),
-        "ocr_result": ai_result.get("ocrResult"),
+        "symbols": db_symbols,
+        "ocr_result": db_ocr,
         "wash_method": ai_result.get("modelSummary"),
         "dry_method": None,
         "caution": None,
@@ -68,13 +75,51 @@ async def analyze_laundry(
     # DB 저장 (database.py 호출)
     save_record(db_record)
 
+    # --- 2. 프론트엔드 응답(API Spec) 맞춤 가공 ---
+    response_data = {
+        "topCandidates": top_candidates
+    }
+    
+    # labelType이 symbol일 때만 symbols 데이터 정제 후 추가
+    if labelType == "symbol" and "symbols" in ai_result:
+        # spec 요구사항에 따라 confidence 필드 제거하고 cls, subclass만 전달
+        cleaned_symbols = [
+            {"cls": s.get("cls"), "subclass": s.get("subclass")} 
+            for s in ai_result.get("symbols", [])
+        ]
+        response_data["symbols"] = cleaned_symbols
+        
+    # labelType이 ocr일 때만 ocrResult 추가
+    elif labelType == "ocr" and "ocrResult" in ai_result:
+        response_data["ocrResult"] = ai_result.get("ocrResult")
+        
+    # modelSummary가 있으면 추가
+    if "modelSummary" in ai_result:
+        response_data["modelSummary"] = ai_result.get("modelSummary")
+
+    # 프론트엔드에 진짜 결과 반환
     return {
         "status": "success",
         "message": "AI 분석 완료",
-        "data": ai_result
+        "data": response_data
     }
 
-# 2. GET /records
+
+# 대화 목록을 받기 위한 데이터 구조 정의
+class ChatRequest(BaseModel):
+    messages: list
+
+# 2. POST /chat
+@app.post("/chat", summary="AI 채팅 서비스")
+async def chat_with_ai(request: ChatRequest):
+    try:
+        # 가짜 응답 함수 호출
+        reply = get_claude_response(request.messages)
+        return {"reply": reply}
+    except Exception as e:
+        return {"status": "error", "message": f"채팅 처리 중 오류 발생: {str(e)}"}
+    
+# 3. GET /records
 @app.get("/records", summary="세탁 기록 목록 조회")
 async def get_laundry_records(limit: int = 10, offset: int = 0):
     """
