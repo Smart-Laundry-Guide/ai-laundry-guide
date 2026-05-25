@@ -2,9 +2,8 @@
 from fastapi.middleware.cors import CORSMiddleware
 from services.database import init_db, save_record, get_all_records
 from pydantic import BaseModel
-from services.chatbot import get_claude_response
+from services.chatbot import get_gemini_response
 import os
-from datetime import datetime
 
 # 파이프라인 함수 불러오기
 from pipeline import run_pipeline 
@@ -110,11 +109,11 @@ class ChatRequest(BaseModel):
     messages: list
 
 # 2. POST /chat
-@app.post("/chat", summary="AI 채팅 서비스")
+@app.post("/api/chat", summary="AI 채팅 서비스")
 async def chat_with_ai(request: ChatRequest):
     try:
         # 가짜 응답 함수 호출
-        reply = get_claude_response(request.messages)
+        reply = get_gemini_response(request.messages)
         return {"reply": reply}
     except Exception as e:
         return {"status": "error", "message": f"채팅 처리 중 오류 발생: {str(e)}"}
