@@ -209,6 +209,9 @@ __marimo__/
 # Node
 node_modules/
 
+# Model weights
+model_weights/
+
 # Custom Project Files
 #  Ignore local databases and temporary user uploads to prevent conflicts and protect privacy.
 laundry_records.db
