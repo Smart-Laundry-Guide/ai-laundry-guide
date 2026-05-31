@@ -354,7 +354,7 @@ export function ResultScreen() {
       return next;
     });
   const [symSel, setSymSel] = useState<SymbolSel>(() => {
-    if (state.initialSymSel) return state.initialSymSel as SymbolSel;
+    if (state.initialSymSel) return state.initialSymSel as unknown as SymbolSel;
     return yoloToSel(state.symbols ?? []);
   });
 
@@ -374,15 +374,13 @@ export function ResultScreen() {
       ? (state.modelSummary ?? buildSymbolSummary(symSel, displayName))
       : labelType === 'ocr'
       ? (state.modelSummary ?? buildOcrSummary(ocr ?? {}, displayName))
-      : (state.modelSummary ?? clothing.summary);
+      : clothing.summary;
 
   // 저장 시 요약 텍스트
   const saveSummary =
     labelType === 'symbol'
       ? guideRows.filter(r => !r.prohibited).map(r => r.label).join(' / ') || aiSummary
-      : labelType === 'ocr'
-        ? aiSummary
-        : clothing.washMethod + ' / ' + clothing.dryMethod;
+      : aiSummary;
 
   return (
     <div className="min-h-screen bg-[#f8fafb]">
@@ -723,7 +721,7 @@ export function ResultScreen() {
                   tags: [], tagColors: [],
                   labelType,
                   capturedImage: capturedImage ?? undefined,
-                  symSel: symSel as Record<string, string | null>,
+                  symSel: symSel as unknown as Record<string, string | null>,
                   ocrResult: ocr,
                 });
                 navigate('/history');
