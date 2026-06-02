@@ -474,10 +474,16 @@ export function ResultScreen() {
   const ocr         = state.ocrResult;
   const guideRows   = buildRows(symSel);
 
+  // OCR 결과가 없거나 모든 항목이 비어 있으면 실패로 간주
+  const ocrFailed = labelType === 'ocr' && (
+    !ocr ||
+    (!ocr.care?.length && !ocr.warning?.length && !ocr.prohibitions?.length && !ocr.materials?.length)
+  );
+
   const aiSummary =
     labelType === 'symbol'
       ? buildSymbolSummary(symSel, displayName)
-      : labelType === 'ocr'
+      : (labelType === 'ocr' && !ocrFailed)
       ? buildOcrSummary(ocr ?? {}, displayName)
       : clothing.summary;
 
@@ -518,7 +524,8 @@ export function ResultScreen() {
               <span className="inline-block mt-1.5 px-2.5 py-1 rounded-full"
                 style={{background:'#e3f4fb',color:'#1a5f7a',fontSize:'11px',fontWeight:600}}>
                 {labelType==='symbol' ? '라벨 기호 분석'
-                  : labelType==='ocr'    ? '주의 문구 분석'
+                  : labelType==='ocr' && !ocrFailed ? '주의 문구 분석'
+                  : labelType==='ocr' && ocrFailed  ? '의류 사진 분석 (대체)'
                   : '의류 사진 분석'}
               </span>
             </div>
@@ -771,8 +778,42 @@ export function ResultScreen() {
           </>
         )}
 
-        {/* ════════════ 모드 B: OCR ════════════ */}
-        {labelType === 'ocr' && ocr && (
+        {/* ════════════ 모드 B-1: OCR 실패 → 의류 사진 분석으로 대체 ════════════ */}
+        {ocrFailed && (
+          <>
+            <div className="rounded-3xl p-4"
+              style={{background:'linear-gradient(135deg,#fef3c7,#fde68a)'}}>
+              <p className="text-[#92400e]" style={{fontSize:'13px',lineHeight:'1.6'}}>
+                ⚠️ 주의 문구 인식에 실패했어요. 의류 사진 분석 결과로 대체합니다.
+              </p>
+            </div>
+            <div className="bg-white rounded-3xl p-6 shadow-sm">
+              <h2 className="text-[#1a2332] mb-5" style={{fontSize:'17px',fontWeight:700}}>세탁 방법</h2>
+              <div className="space-y-4">
+                {[
+                  {icon:<Droplet size={20} className="stroke-[#87CEEB]" strokeWidth={2}/>,bg:'#e3f4fb',label:'세탁 방식',value:clothing.washMethod},
+                  {icon:<Package size={20} className="stroke-[#87CEEB]" strokeWidth={2}/>,bg:'#e3f4fb',label:'권장 모드',value:clothing.washMode},
+                  {icon:<Wind size={20} className="stroke-[#98D8C8]" strokeWidth={2}/>,bg:'#d4f1e8',label:'건조 방법',value:clothing.dryMethod},
+                  {icon:<AlertTriangle size={20} className="stroke-[#ef4444]" strokeWidth={2}/>,bg:'#fee2e2',label:'주의 사항',value:clothing.caution},
+                ].map((row,i)=>(
+                  <div key={i} className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                      style={{background:row.bg}}>
+                      {row.icon}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-[#1a2332] mb-0.5" style={{fontSize:'14px',fontWeight:600}}>{row.label}</p>
+                      <p className="text-[#6b7688]" style={{fontSize:'13px'}}>{row.value}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ════════════ 모드 B-2: OCR 성공 ════════════ */}
+        {labelType === 'ocr' && ocr && !ocrFailed && (
           <div className="bg-white rounded-3xl p-6 shadow-sm">
             <h2 className="text-[#1a2332] mb-4" style={{fontSize:'17px',fontWeight:700}}>세탁 방법</h2>
             <div className="space-y-4">
@@ -845,7 +886,7 @@ export function ResultScreen() {
         )}
 
         {/* ════════════ 모드 C: 의류 사진만 ════════════ */}
-        {!labelType && (
+        {!labelType && !ocrFailed && (
           <>
             {!readOnly && (
               <div className="rounded-3xl p-4"
