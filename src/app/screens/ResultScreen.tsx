@@ -2,7 +2,7 @@ import { ArrowLeft, Droplet, Wind, AlertTriangle, Package, Shirt, Trash2, CheckC
 import { useLocation, useNavigate } from 'react-router';
 import { useState } from 'react';
 import { saveHistoryItem } from './HistoryScreen';
-import { SymbolIcon } from '../components/LaundrySymbols';
+import { SymbolIcon, MachineWashIcon, HandWashIcon } from '../components/LaundrySymbols';
 
 // ─── 타입 ─────────────────────────────────────────────────────────────────────
 interface Candidate { cls: string; confidence: number; }
@@ -19,11 +19,6 @@ interface LocationState {
   symbols?: SymbolResult[];
   capturedImage?: string;
   clothingPreview?: string;
-  /**
-   * 모델이 직접 생성한 한국어 분석 문장.
-   * analysisService.ts 의 AnalysisApiResponse.modelSummary 에서 전달됩니다.
-   * 값이 있으면 규칙 기반 문장(buildSymbolSummary 등) 대신 이 값을 표시합니다.
-   */
   modelSummary?: string;
   readOnly?: boolean;
   initialSymSel?: Record<string, string | null>;
@@ -96,12 +91,18 @@ const CLOTHING: Record<string,ClothingGuide> = {
 };
 
 // ─── 기호 선택 상태 ────────────────────────────────────────────────────────────
-type WashSel     = 'machine_30'|'machine_40'|'machine_60'|'hand_40'|'hand_30'|'hand_neutral'|'no_wash'|null;
+type WashSel =
+  | 'm30gn' | 'm30vg' | 'm30g'
+  | 'm60g'  | 'm50g'  | 'm40vg' | 'm40g'
+  | 'm95' | 'm70' | 'm60' | 'm50' | 'm40' | 'm30'
+  | 'h40gn' | 'h30gn' | 'h40n' | 'h30n'
+  | 'h40g'  | 'h30g'  | 'h40'  | 'h30'
+  | 'no_wash' | null;
 type BleachSel   = 'cl_ok'|'cl_no'|'ox_ok'|'ox_no'|null;
 type MachineDry  = 'ok_60'|'ok_80'|'no'|null;
 type NaturalDry  = 'hang_sun'|'hang_shade'|'flat_sun'|'flat_shade'|null;
 type IronSel     = 'low'|'mid'|'high'|'no'|null;
-type DryCleanSel = 'ok'|'gentle'|'special'|'no'|null;
+type DryCleanSel = 'ok'|'petroleum'|'silicone'|'special'|'no'|null;
 type SqueezeSel  = 'ok'|'no'|null;
 interface SymbolSel {
   wash: WashSel; bleach: BleachSel; machine_dry: MachineDry;
@@ -112,8 +113,8 @@ function yoloToSel(yolo: SymbolResult[]): SymbolSel {
   const s = new Set(yolo.map(x => x.cls));
   return {
     wash:        s.has('no_wash')      ? 'no_wash'
-                :s.has('hand_wash')    ? 'hand_30'
-                :s.has('machine_wash') ? 'machine_40' : null,
+                :s.has('hand_wash')    ? 'h30'
+                :s.has('machine_wash') ? 'm40' : null,
     bleach:      s.has('no_bleach') ? 'cl_no' : s.has('bleach') ? 'cl_ok' : null,
     machine_dry: s.has('no_tumble_dry') ? 'no' : s.has('tumble_dry') ? 'ok_60' : null,
     natural_dry: s.has('natural_dry') ? 'hang_shade' : null,
@@ -124,22 +125,42 @@ function yoloToSel(yolo: SymbolResult[]): SymbolSel {
 }
 
 // ─── 가이드 행 생성 ────────────────────────────────────────────────────────────
-interface GuideRow { category: string; code: string; label: string; prohibited: boolean; }
+interface GuideRow {
+  category: string; code: string; label: string; prohibited: boolean;
+  washType?: 'machine' | 'hand'; temp?: number; gentle?: boolean; veryGentle?: boolean; neutral?: boolean;
+}
 
 function buildRows(sel: SymbolSel): GuideRow[] {
   const rows: GuideRow[] = [];
-  const washMap: Record<string,{code:string;label:string;prohibited:boolean}> = {
-    machine_30:  {code:'wash_30',      label:'세탁기 세탁 (30°C 이하)',         prohibited:false},
-    machine_40:  {code:'wash_40',      label:'세탁기 세탁 (40~50°C)',           prohibited:false},
-    machine_60:  {code:'wash_60',      label:'세탁기 세탁 (60°C 이상)',         prohibited:false},
-    hand_40:     {code:'hand_40',      label:'손세탁 (40°C 이하, 세탁기 불가)', prohibited:false},
-    hand_30:     {code:'hand_30',      label:'손세탁 (30°C 이하, 세탁기 불가)', prohibited:false},
-    hand_neutral:{code:'hand_neutral', label:'손세탁 (중성세제, 세탁기 불가)',  prohibited:false},
-    no_wash:     {code:'wash_no',      label:'물세탁 금지',                     prohibited:true},
+  type WashEntry = { code: string; label: string; prohibited: boolean; washType?: 'machine'|'hand'; temp?: number; gentle?: boolean; veryGentle?: boolean; neutral?: boolean };
+  const washMap: Record<string, WashEntry> = {
+    m30gn: { code:'', label:'세탁기 세탁 (30°C, 약하게, 중성세제)', prohibited:false, washType:'machine', temp:30, gentle:true,     neutral:true  },
+    m30vg: { code:'', label:'세탁기 세탁 (30°C, 매우 약하게)',       prohibited:false, washType:'machine', temp:30, veryGentle:true                },
+    m30g:  { code:'', label:'세탁기 세탁 (30°C, 약하게)',            prohibited:false, washType:'machine', temp:30, gentle:true                    },
+    m60g:  { code:'', label:'세탁기 세탁 (60°C, 약하게)',            prohibited:false, washType:'machine', temp:60, gentle:true                    },
+    m50g:  { code:'', label:'세탁기 세탁 (50°C, 약하게)',            prohibited:false, washType:'machine', temp:50, gentle:true                    },
+    m40vg: { code:'', label:'세탁기 세탁 (40°C, 매우 약하게)',       prohibited:false, washType:'machine', temp:40, veryGentle:true                },
+    m40g:  { code:'', label:'세탁기 세탁 (40°C, 약하게)',            prohibited:false, washType:'machine', temp:40, gentle:true                    },
+    m95:   { code:'', label:'세탁기 세탁 (95°C)',                    prohibited:false, washType:'machine', temp:95  },
+    m70:   { code:'', label:'세탁기 세탁 (70°C)',                    prohibited:false, washType:'machine', temp:70  },
+    m60:   { code:'', label:'세탁기 세탁 (60°C)',                    prohibited:false, washType:'machine', temp:60  },
+    m50:   { code:'', label:'세탁기 세탁 (50°C)',                    prohibited:false, washType:'machine', temp:50  },
+    m40:   { code:'', label:'세탁기 세탁 (40°C)',                    prohibited:false, washType:'machine', temp:40  },
+    m30:   { code:'', label:'세탁기 세탁 (30°C)',                    prohibited:false, washType:'machine', temp:30  },
+    h40gn: { code:'', label:'손세탁 (40°C, 약하게, 중성세제)',       prohibited:false, washType:'hand', temp:40, gentle:true, neutral:true },
+    h30gn: { code:'', label:'손세탁 (30°C, 약하게, 중성세제)',       prohibited:false, washType:'hand', temp:30, gentle:true, neutral:true },
+    h40n:  { code:'', label:'손세탁 (40°C, 중성세제)',               prohibited:false, washType:'hand', temp:40, neutral:true               },
+    h30n:  { code:'', label:'손세탁 (30°C, 중성세제)',               prohibited:false, washType:'hand', temp:30, neutral:true               },
+    h40g:  { code:'', label:'손세탁 (40°C, 약하게)',                 prohibited:false, washType:'hand', temp:40, gentle:true                },
+    h30g:  { code:'', label:'손세탁 (30°C, 약하게)',                 prohibited:false, washType:'hand', temp:30, gentle:true                },
+    h40:   { code:'', label:'손세탁 (40°C)',                         prohibited:false, washType:'hand', temp:40 },
+    h30:   { code:'', label:'손세탁 (30°C)',                         prohibited:false, washType:'hand', temp:30 },
+    no_wash:{ code:'wash_no', label:'물세탁 금지', prohibited:true },
   };
   if (sel.wash && washMap[sel.wash]) {
     const w = washMap[sel.wash];
-    rows.push({category:'세탁',code:w.code,label:w.label,prohibited:w.prohibited});
+    rows.push({ category:'세탁', code:w.code, label:w.label, prohibited:w.prohibited,
+      washType:w.washType, temp:w.temp, gentle:w.gentle, veryGentle:w.veryGentle, neutral:w.neutral });
   }
   const bleachMap: Record<string,{code:string;label:string;prohibited:boolean}> = {
     cl_ok:{code:'bleach_cl_ok',label:'염소계 표백 가능',prohibited:false},
@@ -181,10 +202,11 @@ function buildRows(sel: SymbolSel): GuideRow[] {
     rows.push({category:'다림질',code:ir.code,label:ir.label,prohibited:ir.prohibited});
   }
   const dcMap: Record<string,{code:string;label:string;prohibited:boolean}> = {
-    ok:     {code:'dryclean_ok',     label:'드라이클리닝 가능',prohibited:false},
-    gentle: {code:'dryclean_gentle', label:'드라이클리닝 약하게',prohibited:false},
-    special:{code:'dryclean_special',label:'전문점 드라이클리닝',prohibited:false},
-    no:     {code:'dryclean_no',     label:'드라이클리닝 금지',prohibited:true},
+    ok:       {code:'dryclean_ok',        label:'드라이클리닝 가능',  prohibited:false},
+    petroleum:{code:'dryclean_petroleum', label:'석유계 드라이클리닝',prohibited:false},
+    silicone: {code:'dryclean_silicone',  label:'실리콘계 드라이클리닝',prohibited:false},
+    special:  {code:'dryclean_special',   label:'전문점 드라이클리닝',prohibited:false},
+    no:       {code:'dryclean_no',        label:'드라이클리닝 금지',  prohibited:true},
   };
   if (sel.dryclean && dcMap[sel.dryclean]) {
     const dc = dcMap[sel.dryclean];
@@ -203,51 +225,105 @@ function buildRows(sel: SymbolSel): GuideRow[] {
 
 // ─── AI 분석 문장 생성 ───────────────────────────────────────────────────────
 function buildSymbolSummary(sel: SymbolSel, name: string): string {
-  const s: string[] = [];
+  const sentences: string[] = [];
 
-  // 세탁
-  if (sel.wash === 'no_wash')       s.push(`${name}은(는) 물세탁이 불가해요. 드라이클리닝을 이용해 주세요.`);
-  else if (sel.wash === 'machine_30') s.push('찬물(30°C 이하)로 세탁기 세탁이 가능해요.');
-  else if (sel.wash === 'machine_40') s.push('미지근한 물(40~50°C)로 세탁기 세탁이 가능해요.');
-  else if (sel.wash === 'machine_60') s.push('뜨거운 물(60°C 이상)로 세탁기 세탁이 가능해요.');
-  else if (sel.wash === 'hand_40')    s.push('40°C 이하 미지근한 물로 손세탁만 가능해요. 세탁기 사용은 피해 주세요.');
-  else if (sel.wash === 'hand_30')    s.push('30°C 이하 찬물로 손세탁만 가능해요. 세탁기 사용은 피해 주세요.');
-  else if (sel.wash === 'hand_neutral') s.push('중성세제로 손세탁해 주세요. 세탁기 사용은 피해 주세요.');
+  // ── 세탁 ──────────────────────────────────────────────────────────────────
+  if (sel.wash === 'no_wash') {
+    sentences.push(`${name}은(는) 물세탁이 불가능해요. 반드시 드라이클리닝을 이용해 주세요.`);
+  } else if (sel.wash) {
+    const washPhrase: Record<string, string> = {
+      m30gn: '30°C 이하 찬물에 중성세제를 사용해 약한 수류로 세탁기 세탁하세요',
+      m30vg: '30°C 이하 찬물에서 매우 약한 수류(세탁망 권장)로 세탁기 세탁하세요',
+      m30g:  '30°C 이하 찬물에서 약한 수류로 세탁기 세탁이 가능해요',
+      m60g:  '60°C에서 약한 수류로 세탁기 세탁이 가능해요',
+      m50g:  '50°C에서 약한 수류로 세탁기 세탁이 가능해요',
+      m40vg: '40°C 이하에서 매우 약한 수류(울 코스)로 세탁기 세탁이 가능해요',
+      m40g:  '40°C 이하에서 약한 수류(섬세 코스)로 세탁기 세탁이 가능해요',
+      m95:   '95°C 고온으로 세탁기 세탁이 가능해요. 흰 면 소재에 적합해요',
+      m70:   '70°C 뜨거운 물로 세탁기 세탁이 가능해요',
+      m60:   '60°C 뜨거운 물로 세탁기 세탁이 가능해요',
+      m50:   '50°C 미온수로 세탁기 세탁이 가능해요',
+      m40:   '40°C 이하 미온수로 세탁기 세탁이 가능해요',
+      m30:   '30°C 이하 찬물로 세탁기 세탁이 가능해요',
+      h40gn: '40°C 이하 미온수에 중성세제를 사용해 약하게 손세탁해 주세요',
+      h30gn: '30°C 이하 찬물에 중성세제를 사용해 약하게 손세탁해 주세요',
+      h40n:  '40°C 이하 미온수에 중성세제로 손세탁해 주세요',
+      h30n:  '30°C 이하 찬물에 중성세제로 손세탁해 주세요',
+      h40g:  '40°C 이하 미온수에서 약하게 손세탁해 주세요',
+      h30g:  '30°C 이하 찬물에서 약하게 손세탁해 주세요',
+      h40:   '40°C 이하 미온수로 손세탁해 주세요',
+      h30:   '30°C 이하 찬물로 손세탁해 주세요',
+    };
 
-  // 표백
-  if (sel.bleach === 'cl_no' || sel.bleach === 'ox_no') s.push('표백제는 사용하지 마세요.');
-  else if (sel.bleach === 'cl_ok') s.push('염소계 표백제 사용이 가능해요.');
-  else if (sel.bleach === 'ox_ok') s.push('산소계 표백제 사용이 가능해요.');
+    const isHand = sel.wash.startsWith('h');
+    let ws = washPhrase[sel.wash] ?? '';
 
-  // 건조기
-  if (sel.machine_dry === 'no')      s.push('건조기 사용은 금지되어 있어요.');
-  else if (sel.machine_dry === 'ok_60') s.push('건조기를 60°C 이하로 사용할 수 있어요.');
-  else if (sel.machine_dry === 'ok_80') s.push('건조기를 80°C 이하로 사용할 수 있어요.');
+    // 손세탁이면 세탁기 금지 문구를 자연스럽게 이어 붙임
+    if (isHand) ws += '. 세탁기 사용은 피해 주세요';
 
-  // 자연건조
-  if (sel.natural_dry === 'hang_sun')   s.push('옷걸이에 걸어 햇빛에서 자연건조해 주세요.');
-  else if (sel.natural_dry === 'hang_shade') s.push('옷걸이에 걸어 그늘에서 자연건조해 주세요.');
-  else if (sel.natural_dry === 'flat_sun')  s.push('평평하게 뉘어서 햇빛에서 건조해 주세요.');
-  else if (sel.natural_dry === 'flat_shade') s.push('평평하게 뉘어서 그늘에서 건조해 주세요.');
+    // 표백 정보를 세탁 문장에 이어 붙여 한 문단으로 묶음
+    if (sel.bleach === 'cl_no' || sel.bleach === 'ox_no') {
+      ws += '. 표백제는 사용하지 마세요';
+    } else if (sel.bleach === 'ox_ok') {
+      ws += '. 산소계 표백제는 사용 가능해요';
+    } else if (sel.bleach === 'cl_ok') {
+      ws += '. 염소계 표백제도 사용 가능해요';
+    }
 
-  // 다림질
-  if (sel.iron === 'no')    s.push('다림질은 하지 마세요.');
-  else if (sel.iron === 'low')  s.push('저온(120°C 이하)으로만 다림질할 수 있어요.');
-  else if (sel.iron === 'mid')  s.push('중온(160°C 이하)으로 다림질할 수 있어요.');
-  else if (sel.iron === 'high') s.push('고온(210°C 이하)으로 다림질할 수 있어요.');
+    if (ws) sentences.push(ws + '.');
+  }
 
-  // 드라이클리닝
-  if (sel.dryclean === 'no')      s.push('드라이클리닝은 불가해요.');
-  else if (sel.dryclean === 'ok')     s.push('드라이클리닝이 가능해요.');
-  else if (sel.dryclean === 'gentle') s.push('드라이클리닝 시 약하게 처리해 달라고 요청해 주세요.');
-  else if (sel.dryclean === 'special') s.push('특수 용제를 사용하는 전문 드라이클리닝이 필요해요.');
+  // 세탁 정보 없이 표백 정보만 있을 경우
+  if (!sel.wash) {
+    if (sel.bleach === 'cl_no' || sel.bleach === 'ox_no') sentences.push('표백제는 사용하지 마세요.');
+    else if (sel.bleach === 'ox_ok') sentences.push('산소계 표백제는 사용 가능해요.');
+    else if (sel.bleach === 'cl_ok') sentences.push('염소계 표백제도 사용 가능해요.');
+  }
 
-  // 탈수
-  if (sel.squeeze === 'no')  s.push('탈수 또는 짜기는 하지 마세요.');
-  else if (sel.squeeze === 'ok') s.push('약하게 탈수할 수 있어요.');
+  // ── 건조 (machine_dry + natural_dry 한 문장으로 묶기) ─────────────────────
+  const natPhrase: Record<string, string> = {
+    hang_sun:   '옷걸이에 걸어 햇빛에서 자연건조해 주세요',
+    hang_shade: '옷걸이에 걸어 그늘에서 자연건조해 주세요',
+    flat_sun:   '평평하게 뉘어 햇빛에서 건조해 주세요',
+    flat_shade: '평평하게 뉘어 그늘에서 건조해 주세요',
+  };
+  const nat = sel.natural_dry ? natPhrase[sel.natural_dry] : '';
 
-  return s.length
-    ? s.join(' ')
+  if (sel.machine_dry === 'no' && nat) {
+    sentences.push(`건조기 사용은 금지되어 있어요. ${nat}.`);
+  } else if (sel.machine_dry === 'no') {
+    sentences.push('건조기 사용은 금지되어 있어요.');
+  } else if (sel.machine_dry === 'ok_60' && nat) {
+    sentences.push(`건조기를 60°C 이하로 사용하거나, ${nat}.`);
+  } else if (sel.machine_dry === 'ok_80' && nat) {
+    sentences.push(`건조기를 80°C 이하로 사용하거나, ${nat}.`);
+  } else if (sel.machine_dry === 'ok_60') {
+    sentences.push('건조기를 60°C 이하로 사용할 수 있어요.');
+  } else if (sel.machine_dry === 'ok_80') {
+    sentences.push('건조기를 80°C 이하로 사용할 수 있어요.');
+  } else if (nat) {
+    sentences.push(nat + '.');
+  }
+
+  // ── 다림질 ────────────────────────────────────────────────────────────────
+  if (sel.iron === 'no')        sentences.push('다림질은 하지 마세요.');
+  else if (sel.iron === 'low')  sentences.push('다림질이 필요하다면 저온(120°C 이하)으로만 해 주세요.');
+  else if (sel.iron === 'mid')  sentences.push('중온(160°C 이하)으로 다림질할 수 있어요.');
+  else if (sel.iron === 'high') sentences.push('고온(210°C 이하)으로 다림질 가능해요.');
+
+  // ── 드라이클리닝 ──────────────────────────────────────────────────────────
+  if (sel.dryclean === 'no')             sentences.push('드라이클리닝은 불가해요.');
+  else if (sel.dryclean === 'ok')        sentences.push('드라이클리닝도 가능해요.');
+  else if (sel.dryclean === 'petroleum') sentences.push('드라이클리닝 시 세탁소에 석유계 용제 처리를 요청하세요.');
+  else if (sel.dryclean === 'silicone')  sentences.push('드라이클리닝 시 세탁소에 실리콘계 용제 처리를 요청하세요.');
+  else if (sel.dryclean === 'special')   sentences.push('특수 소재 전문점에서만 드라이클리닝이 가능해요.');
+
+  // ── 탈수 ─────────────────────────────────────────────────────────────────
+  if (sel.squeeze === 'no')      sentences.push('세탁 후 탈수나 짜기는 하지 마세요.');
+  else if (sel.squeeze === 'ok') sentences.push('약하게 탈수할 수 있어요.');
+
+  return sentences.length
+    ? sentences.join(' ')
     : `${name} 라벨 기호를 인식했어요. 아래 세탁 방법을 참고해 주세요.`;
 }
 
@@ -269,17 +345,40 @@ function buildOcrSummary(ocr: OcrResult, name: string): string {
 // ─── 수정 패널 카테고리 정의 ──────────────────────────────────────────────────
 const CORRECTION_CATS: {
   key: keyof SymbolSel; label: string;
-  options: { value: string; code: string; label: string }[];
+  options: {
+    value: string; code: string; label: string;
+    group?: string;
+    washType?: 'machine' | 'hand';
+    temp?: number;
+    gentle?: boolean;
+    veryGentle?: boolean;
+    neutral?: boolean;
+  }[];
 }[] = [
   { key:'wash', label:'세탁 방법',
     options:[
-      {value:'machine_30',  code:'wash_30',      label:'세탁기 30°C'},
-      {value:'machine_40',  code:'wash_40',       label:'세탁기 40~50°C'},
-      {value:'machine_60',  code:'wash_60',       label:'세탁기 60°C+'},
-      {value:'hand_40',     code:'hand_40',       label:'손세탁 40°C'},
-      {value:'hand_30',     code:'hand_30',       label:'손세탁 30°C'},
-      {value:'hand_neutral',code:'hand_neutral',  label:'손세탁 중성세제'},
-      {value:'no_wash',     code:'wash_no',       label:'물세탁 금지'},
+      { group:'일반세탁', value:'m30gn', code:'', label:'세탁기 30°C · 약 · 중성',  washType:'machine', temp:30, gentle:true,     neutral:true },
+      { group:'일반세탁', value:'m30vg', code:'', label:'세탁기 30°C · 매우 약하게', washType:'machine', temp:30, veryGentle:true               },
+      { group:'일반세탁', value:'m30g',  code:'', label:'세탁기 30°C · 약하게',      washType:'machine', temp:30, gentle:true                   },
+      { group:'일반세탁', value:'m60g',  code:'', label:'세탁기 60°C · 약하게',      washType:'machine', temp:60, gentle:true                   },
+      { group:'일반세탁', value:'m50g',  code:'', label:'세탁기 50°C · 약하게',      washType:'machine', temp:50, gentle:true                   },
+      { group:'일반세탁', value:'m40vg', code:'', label:'세탁기 40°C · 매우 약하게', washType:'machine', temp:40, veryGentle:true               },
+      { group:'일반세탁', value:'m40g',  code:'', label:'세탁기 40°C · 약하게',      washType:'machine', temp:40, gentle:true                   },
+      { group:'일반세탁', value:'m95',   code:'', label:'세탁기 95°C',               washType:'machine', temp:95  },
+      { group:'일반세탁', value:'m70',   code:'', label:'세탁기 70°C',               washType:'machine', temp:70  },
+      { group:'일반세탁', value:'m60',   code:'', label:'세탁기 60°C',               washType:'machine', temp:60  },
+      { group:'일반세탁', value:'m50',   code:'', label:'세탁기 50°C',               washType:'machine', temp:50  },
+      { group:'일반세탁', value:'m40',   code:'', label:'세탁기 40°C',               washType:'machine', temp:40  },
+      { group:'일반세탁', value:'m30',   code:'', label:'세탁기 30°C',               washType:'machine', temp:30  },
+      { group:'손세탁', value:'h40gn', code:'', label:'손세탁 40°C · 약 · 중성',  washType:'hand', temp:40, gentle:true, neutral:true },
+      { group:'손세탁', value:'h30gn', code:'', label:'손세탁 30°C · 약 · 중성',  washType:'hand', temp:30, gentle:true, neutral:true },
+      { group:'손세탁', value:'h40n',  code:'', label:'손세탁 40°C · 중성',       washType:'hand', temp:40, neutral:true               },
+      { group:'손세탁', value:'h30n',  code:'', label:'손세탁 30°C · 중성',       washType:'hand', temp:30, neutral:true               },
+      { group:'손세탁', value:'h40g',  code:'', label:'손세탁 40°C · 약하게',     washType:'hand', temp:40, gentle:true                },
+      { group:'손세탁', value:'h30g',  code:'', label:'손세탁 30°C · 약하게',     washType:'hand', temp:30, gentle:true                },
+      { group:'손세탁', value:'h40',   code:'', label:'손세탁 40°C',              washType:'hand', temp:40 },
+      { group:'손세탁', value:'h30',   code:'', label:'손세탁 30°C',              washType:'hand', temp:30 },
+      { group:'금지', value:'no_wash', code:'wash_no', label:'물세탁 금지' },
     ],
   },
   { key:'bleach', label:'표백',
@@ -315,10 +414,11 @@ const CORRECTION_CATS: {
   },
   { key:'dryclean', label:'드라이클리닝',
     options:[
-      {value:'ok',     code:'dryclean_ok',     label:'일반'},
-      {value:'gentle', code:'dryclean_gentle', label:'약하게'},
-      {value:'special',code:'dryclean_special',label:'전문점'},
-      {value:'no',     code:'dryclean_no',     label:'금지'},
+      {value:'ok',        code:'dryclean_ok',        label:'가능'},
+      {value:'petroleum', code:'dryclean_petroleum',  label:'석유계'},
+      {value:'silicone',  code:'dryclean_silicone',   label:'실리콘계'},
+      {value:'special',   code:'dryclean_special',    label:'전문점'},
+      {value:'no',        code:'dryclean_no',         label:'금지'},
     ],
   },
   { key:'squeeze', label:'탈수',
@@ -343,14 +443,20 @@ export function ResultScreen() {
     {cls:'knit',confidence:0.87},{cls:'T_shirt',confidence:0.74},
   ];
 
-  const [selectedIdx,   setSelectedIdx]   = useState(0);
+  const [selectedIdx,    setSelectedIdx]    = useState(0);
   const [showCorrection, setShowCorrection] = useState(false);
-  // 카테고리별 개별 접기/펼치기 — 초기에는 모두 닫혀 있음
-  const [openCats, setOpenCats] = useState<Set<string>>(new Set());
+  const [openCats,       setOpenCats]       = useState<Set<string>>(new Set());
   const toggleCat = (key: string) =>
     setOpenCats(prev => {
       const next = new Set(prev);
       next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  const [openWashGroups, setOpenWashGroups] = useState<Set<string>>(new Set());
+  const toggleWashGroup = (g: string) =>
+    setOpenWashGroups(prev => {
+      const next = new Set(prev);
+      next.has(g) ? next.delete(g) : next.add(g);
       return next;
     });
   const [symSel, setSymSel] = useState<SymbolSel>(() => {
@@ -358,7 +464,6 @@ export function ResultScreen() {
     return yoloToSel(state.symbols ?? []);
   });
 
-  // 카테고리 내 단일 선택 토글
   const toggleSel = (key: keyof SymbolSel, value: string) => {
     setSymSel(prev => ({ ...prev, [key]: prev[key] === value ? null : value }));
   };
@@ -371,12 +476,11 @@ export function ResultScreen() {
 
   const aiSummary =
     labelType === 'symbol'
-      ? (state.modelSummary ?? buildSymbolSummary(symSel, displayName))
+      ? buildSymbolSummary(symSel, displayName)
       : labelType === 'ocr'
-      ? (state.modelSummary ?? buildOcrSummary(ocr ?? {}, displayName))
+      ? buildOcrSummary(ocr ?? {}, displayName)
       : clothing.summary;
 
-  // 저장 시 요약 텍스트
   const saveSummary =
     labelType === 'symbol'
       ? guideRows.filter(r => !r.prohibited).map(r => r.label).join(' / ') || aiSummary
@@ -396,10 +500,9 @@ export function ResultScreen() {
 
       <div className="px-6 pt-5 pb-10 space-y-4">
 
-        {/* ── 의류 카드 (사용자 촬영 이미지 / 기본 아이콘) ── */}
+        {/* ── 의류 카드 ── */}
         <div className="bg-white rounded-3xl p-5 shadow-sm">
           <div className="flex items-center gap-4">
-            {/* 썸네일 */}
             <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0"
               style={{background:`linear-gradient(135deg,${clothing.gradientFrom},${clothing.gradientTo})`}}>
               {capturedImage ? (
@@ -422,7 +525,7 @@ export function ResultScreen() {
           </div>
         </div>
 
-        {/* ── Top-2 후보 (의류만 모드, 분석 직후만) ── */}
+        {/* ── Top-2 후보 ── */}
         {!labelType && !readOnly && topCandidates.length >= 2 && (
           <div className="bg-white rounded-3xl p-5 shadow-sm">
             <div className="flex items-center justify-between mb-3">
@@ -476,10 +579,17 @@ export function ResultScreen() {
                 <div className="space-y-3">
                   {guideRows.map((row,i) => (
                     <div key={i} className="flex items-center gap-3">
-                      <div className="w-12 h-12 flex-shrink-0 bg-[#f8fafb] rounded-xl flex items-center justify-center p-1.5">
-                        <SymbolIcon code={row.code}/>
+                      <div className="flex-shrink-0 bg-[#f8fafb] rounded-xl flex items-center justify-center p-1.5"
+                        style={{ width:'48px', height: row.washType ? '56px' : '48px' }}>
+                        {row.washType === 'machine' ? (
+                          <MachineWashIcon temp={row.temp!} gentle={row.gentle} veryGentle={row.veryGentle} neutral={row.neutral} className="w-full h-full"/>
+                        ) : row.washType === 'hand' ? (
+                          <HandWashIcon temp={row.temp!} gentle={row.gentle} veryGentle={row.veryGentle} neutral={row.neutral} className="w-full h-full"/>
+                        ) : (
+                          <SymbolIcon code={row.code}/>
+                        )}
                       </div>
-                      <div>
+                      <div className="flex-1">
                         <p className="text-[#8896a8]" style={{fontSize:'11px',fontWeight:700}}>{row.category}</p>
                         <p style={{fontSize:'14px',fontWeight:500,color:row.prohibited?'#dc2626':'#1a2332'}}>
                           {row.prohibited && '🚫 '}{row.label}
@@ -491,7 +601,7 @@ export function ResultScreen() {
               )}
             </div>
 
-            {/* 기호 수정 패널 — 조회 모드에서는 숨김 */}
+            {/* 기호 수정 패널 */}
             {!readOnly && (
               <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
                 <button onClick={()=>setShowCorrection(v=>!v)}
@@ -523,7 +633,6 @@ export function ResultScreen() {
                       const isOpen = openCats.has(cat.key);
                       return (
                         <div key={cat.key} className="mb-6">
-                          {/* 카테고리 헤더: 클릭으로 접기/펼치기 */}
                           <button
                             onClick={() => toggleCat(cat.key)}
                             className="w-full flex items-center justify-between mb-3">
@@ -542,38 +651,114 @@ export function ResultScreen() {
                                 : <polyline points="6 9 12 15 18 9"/>}
                             </svg>
                           </button>
-                          {/* 기호 버튼 목록 */}
                           {isOpen && (
-                            <div className="flex flex-wrap gap-2">
-                              {cat.options.map(opt => {
-                                const isActive   = catVal === opt.value;
-                                const isDisabled = hasSelection && !isActive;
-                                return (
-                                  <button key={opt.value}
-                                    onClick={() => { if (!isDisabled) toggleSel(cat.key, opt.value); }}
-                                    className="flex items-center gap-2 pl-2.5 pr-2 py-2 rounded-xl border-2 transition-all"
-                                    style={{
-                                      borderColor: isActive ? '#87CEEB' : '#e5e9ef',
-                                      background:  isActive ? '#f0f9ff' : isDisabled ? '#f5f7fa' : 'white',
-                                      opacity:     isDisabled ? 0.4 : 1,
-                                      cursor:      isDisabled ? 'not-allowed' : 'pointer',
-                                    }}>
-                                    <div className="w-8 h-8 flex-shrink-0">
-                                      <SymbolIcon code={opt.code}/>
+                            <div>
+                              {cat.key === 'wash' ? (
+                                (['일반세탁', '손세탁', '금지'] as const).map(groupName => {
+                                  const groupOpts = cat.options.filter(o => o.group === groupName);
+                                  if (!groupOpts.length) return null;
+                                  const isGroupOpen = openWashGroups.has(groupName);
+                                  const noToggle = groupName === '금지';
+                                  return (
+                                    <div key={groupName} className="mb-3">
+                                      {noToggle ? (
+                                        <p className="mb-2"
+                                          style={{fontSize:'11px',fontWeight:700,color:'#87CEEB'}}>
+                                          {groupName}
+                                        </p>
+                                      ) : (
+                                        <button
+                                          onClick={() => toggleWashGroup(groupName)}
+                                          className="w-full flex items-center justify-between mb-2 py-1">
+                                          <span style={{fontSize:'11px',fontWeight:700,
+                                            color: isGroupOpen ? '#87CEEB' : '#8896a8'}}>
+                                            {groupName}
+                                          </span>
+                                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                                            stroke={isGroupOpen ? '#87CEEB' : '#8896a8'}
+                                            strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                            {isGroupOpen
+                                              ? <polyline points="18 15 12 9 6 15"/>
+                                              : <polyline points="6 9 12 15 18 9"/>}
+                                          </svg>
+                                        </button>
+                                      )}
+                                      {(noToggle || isGroupOpen) && (
+                                        <div className="flex flex-wrap gap-2">
+                                          {groupOpts.map(opt => {
+                                            const isActive   = catVal === opt.value;
+                                            const isDisabled = hasSelection && !isActive;
+                                            const iconH = opt.washType ? '40px' : '32px';
+                                            return (
+                                              <button key={opt.value}
+                                                onClick={() => { if (!isDisabled) toggleSel(cat.key, opt.value); }}
+                                                className="flex items-center gap-2 pl-2.5 pr-2 py-2 rounded-xl border-2 transition-all"
+                                                style={{
+                                                  borderColor: isActive ? '#87CEEB' : '#e5e9ef',
+                                                  background:  isActive ? '#f0f9ff' : isDisabled ? '#f5f7fa' : 'white',
+                                                  opacity:     isDisabled ? 0.4 : 1,
+                                                  cursor:      isDisabled ? 'not-allowed' : 'pointer',
+                                                }}>
+                                                <div className="flex-shrink-0" style={{width:'32px', height:iconH}}>
+                                                  {opt.washType === 'machine' ? (
+                                                    <MachineWashIcon temp={opt.temp!} gentle={opt.gentle} veryGentle={opt.veryGentle} neutral={opt.neutral} className="w-full h-full"/>
+                                                  ) : opt.washType === 'hand' ? (
+                                                    <HandWashIcon temp={opt.temp!} gentle={opt.gentle} veryGentle={opt.veryGentle} neutral={opt.neutral} className="w-full h-full"/>
+                                                  ) : (
+                                                    <SymbolIcon code={opt.code}/>
+                                                  )}
+                                                </div>
+                                                <span style={{
+                                                  fontSize:'12px',fontWeight:600,
+                                                  color: isActive ? '#1a5f7a' : isDisabled ? '#c0c8d4' : '#6b7688',
+                                                }}>
+                                                  {opt.label}
+                                                </span>
+                                                {isActive && (
+                                                  <Trash2 size={13} color="#ef4444" strokeWidth={2.5}
+                                                    className="ml-1 flex-shrink-0"/>
+                                                )}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
                                     </div>
-                                    <span style={{
-                                      fontSize:'12px',fontWeight:600,
-                                      color: isActive ? '#1a5f7a' : isDisabled ? '#c0c8d4' : '#6b7688',
-                                    }}>
-                                      {opt.label}
-                                    </span>
-                                    {isActive && (
-                                      <Trash2 size={13} color="#ef4444" strokeWidth={2.5}
-                                        className="ml-1 flex-shrink-0"/>
-                                    )}
-                                  </button>
-                                );
-                              })}
+                                  );
+                                })
+                              ) : (
+                                <div className="flex flex-wrap gap-2">
+                                  {cat.options.map(opt => {
+                                    const isActive   = catVal === opt.value;
+                                    const isDisabled = hasSelection && !isActive;
+                                    return (
+                                      <button key={opt.value}
+                                        onClick={() => { if (!isDisabled) toggleSel(cat.key, opt.value); }}
+                                        className="flex items-center gap-2 pl-2.5 pr-2 py-2 rounded-xl border-2 transition-all"
+                                        style={{
+                                          borderColor: isActive ? '#87CEEB' : '#e5e9ef',
+                                          background:  isActive ? '#f0f9ff' : isDisabled ? '#f5f7fa' : 'white',
+                                          opacity:     isDisabled ? 0.4 : 1,
+                                          cursor:      isDisabled ? 'not-allowed' : 'pointer',
+                                        }}>
+                                        <div className="flex-shrink-0" style={{width:'32px',height:'32px'}}>
+                                          <SymbolIcon code={opt.code}/>
+                                        </div>
+                                        <span style={{
+                                          fontSize:'12px',fontWeight:600,
+                                          color: isActive ? '#1a5f7a' : isDisabled ? '#c0c8d4' : '#6b7688',
+                                        }}>
+                                          {opt.label}
+                                        </span>
+                                        {isActive && (
+                                          <Trash2 size={13} color="#ef4444" strokeWidth={2.5}
+                                            className="ml-1 flex-shrink-0"/>
+                                        )}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -704,7 +889,7 @@ export function ResultScreen() {
           <p className="text-[#4b5a6e]" style={{fontSize:'14px',lineHeight:'1.8'}}>{aiSummary}</p>
         </div>
 
-        {/* ── 하단 버튼 — 조회 전용 모드에서는 숨김 ── */}
+        {/* ── 하단 버튼 ── */}
         {(fromAnalysis && !readOnly) && (
           <div className="flex gap-3 pt-1">
             <button onClick={()=>navigate('/camera')}
