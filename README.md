@@ -105,7 +105,7 @@ npm run build
 현재 분석 API 기본 주소:
 
 ```ts
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = 'http://134.185.127.17:8000';
 ```
 
 프론트엔드는 `POST /analyze` 엔드포인트로 이미지와 라벨 타입을 `FormData` 형식으로 전송합니다.
