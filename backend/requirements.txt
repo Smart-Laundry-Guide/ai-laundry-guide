@@ -17,5 +17,5 @@ opencv-python
 Pillow
 
 # Chatbot & Security
-google-generativeai
+openai
 python-dotenv

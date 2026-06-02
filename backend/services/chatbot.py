@@ -1,13 +1,13 @@
 import os
-import google.generativeai as genai
+from openai import OpenAI
 from dotenv import load_dotenv
 
-# .env 파일에서 GEMINI_API_KEY 읽어오기
+# .env 파일에서 OPENAI_API_KEY 읽어오기
 load_dotenv()
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# 제미나이 API 키 설정
-genai.configure(api_key=GEMINI_API_KEY)
+# OpenAI 클라이언트 초기화
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 # 모바일 앱 환경에 맞게 페르소나 및 응답 규칙 강화
 system_prompt = """너는 친절하고 전문적인 세탁 도우미 AI야. 모바일 앱 챗봇 환경에 맞게 반드시 아래의 규칙을 엄격하게 지켜서 대답해.
@@ -18,42 +18,39 @@ system_prompt = """너는 친절하고 전문적인 세탁 도우미 AI야. 모�
 4. 기호 및 이모티콘 절대 금지: '**', '*', '#' 같은 마크다운 기호나 이모티콘을 절대 사용하지 마. 오직 순수한 텍스트(Plain text)로만 작성해."""
 
 
-model = genai.GenerativeModel(
-    model_name='gemini-2.5-flash-lite',
-    system_instruction=system_prompt
-)
-
-def get_gemini_response(messages):
+def get_chatgpt_response(messages):
     """
-    프론트엔드의 대화 내역(messages)을 제미나이 형식으로 변환하여 연속된 대화를 처리합니다.
+    프론트엔드의 대화 내역(messages)을 OpenAI 형식으로 변환하여 연속된 대화를 처리합니다.
     """
     try:
         if not messages:
             return "질문을 입력해주세요."
 
-        gemini_history = []
+        # 1. OpenAI에 보낼 메시지 리스트 준비 (시스템 프롬프트를 맨 앞에 'system' 역할로 추가)
+        openai_messages = [{"role": "system", "content": system_prompt}]
         
-        # 1. 마지막 메시지를 제외한 이전 대화들을 제미나이 history 형식으로 변환
-        for msg in messages[:-1]:
+        # 2. 프론트엔드에서 온 메시지를 OpenAI 형식에 맞게 정리해서 추가
+        for msg in messages:
             role = msg.get("role")
             content = msg.get("content", "")
             
-            # 프론트엔드의 assistant 혹은 model 역할을 제미나이 스펙('model')에 맞춤
-            gemini_role = "model" if role in ["assistant", "model"] else "user"
+            # 프론트엔드의 역할이 'model'이었다면 OpenAI 스펙에 맞게 'assistant'로 변경
+            openai_role = "assistant" if role in ["assistant", "model"] else "user"
             
-            gemini_history.append({
-                "role": gemini_role,
-                "parts": [content]
+            openai_messages.append({
+                "role": openai_role,
+                "content": content
             })
             
-        # 2. 이전 대화 내역을 가진 채팅 세션 시작
-        chat = model.start_chat(history=gemini_history)
+        # 3. ChatGPT API 호출 (gpt-5.4-mini 모델 사용)
+        response = client.chat.completions.create(
+            model="gpt-5.4-mini",
+            messages=openai_messages,
+            temperature=0.7  # 너무 기계적이지 않고 자연스러운 말투를 위한 수치
+        )
         
-        # 3. 가장 최신의 사용자 질문 전송 및 답변 생성
-        last_user_message = messages[-1].get("content", "")
-        response = chat.send_message(last_user_message)
-        
-        return response.text
+        # 4. 생성된 답변 텍스트만 추출하여 반환
+        return response.choices[0].message.content
 
     except Exception as e:
         print(f"Gemini API Error: {str(e)}")

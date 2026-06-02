@@ -210,3 +210,7 @@ __marimo__/
 #  Ignore local databases and temporary user uploads to prevent conflicts and protect privacy.
 laundry_records.db
 temp_images/
+
+# SSH Keys
+*.key
+*.pem
