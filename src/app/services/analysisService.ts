@@ -106,7 +106,9 @@ export async function analyzeClothing(
 
   if (req.clothingImage) {
     if (req.clothingImage instanceof File) {
-      formData.append('clothingImage', req.clothingImage);
+      // ✅ 압축 적용
+      const compressedClothing = await compressImage(req.clothingImage);
+      formData.append('clothingImage', compressedClothing);
     } else if (typeof req.clothingImage === 'string') {
       const res = await fetch(req.clothingImage);
       const blob = await res.blob();
@@ -116,7 +118,9 @@ export async function analyzeClothing(
 
   if (req.labelImage) {
     if (req.labelImage instanceof File) {
-      formData.append('labelImage', req.labelImage);
+      // ✅ 압축 적용 (이게 제일 중요합니다!)
+      const compressedLabel = await compressImage(req.labelImage);
+      formData.append('labelImage', compressedLabel);
     } else if (typeof req.labelImage === 'string') {
       const res = await fetch(req.labelImage);
       const blob = await res.blob();
@@ -138,3 +142,35 @@ export async function analyzeClothing(
 
   return jsonResponse.data as AnalysisApiResponse;
 }
+
+// ── [추가] 10초 타임아웃 방지용 이미지 강제 압축 함수 ─────────────────────────
+const compressImage = async (file: File): Promise<File> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        // 가로 길이를 600px로 확 줄여버립니다 (서버 연산 속도 폭발적 증가)
+        const MAX_WIDTH = 600; 
+        const scaleSize = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scaleSize;
+
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        // 화질을 60%로 깎아서 JPEG로 변환
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+          } else {
+            resolve(file); // 압축 실패 시 원본 그대로 반환
+          }
+        }, 'image/jpeg', 0.6); 
+      };
+    };
+  });
+};
