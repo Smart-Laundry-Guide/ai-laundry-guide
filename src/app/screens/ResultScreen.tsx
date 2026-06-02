@@ -9,7 +9,7 @@ interface Candidate { cls: string; confidence: number; }
 interface OcrResult {
   care?: string[]; warning?: string[]; prohibitions?: string[]; materials?: string[];
 }
-interface SymbolResult { cls: string; confidence: number; }
+interface SymbolResult { cls: string; confidence: number; subclass?: string | null; }
 interface LocationState {
   fromAnalysis?: boolean;
   labelType?: 'symbol' | 'ocr' | null;
@@ -110,18 +110,104 @@ interface SymbolSel {
 }
 
 function yoloToSel(yolo: SymbolResult[]): SymbolSel {
-  const s = new Set(yolo.map(x => x.cls));
-  return {
-    wash:        s.has('no_wash')      ? 'no_wash'
-                :s.has('hand_wash')    ? 'h30'
-                :s.has('machine_wash') ? 'm40' : null,
-    bleach:      s.has('no_bleach') ? 'cl_no' : s.has('bleach') ? 'cl_ok' : null,
-    machine_dry: s.has('no_tumble_dry') ? 'no' : s.has('tumble_dry') ? 'ok_60' : null,
-    natural_dry: s.has('natural_dry') ? 'hang_shade' : null,
-    iron:        s.has('no_iron') ? 'no' : s.has('iron') ? 'mid' : null,
-    dryclean:    s.has('no_dry_clean') ? 'no' : s.has('dry_clean') ? 'ok' : null,
-    squeeze:     s.has('no_squeeze') ? 'no' : s.has('squeeze') ? 'ok' : null,
-  };
+  const find = (cls: string) => yolo.find(x => x.cls === cls);
+
+  // ── 세탁 ──────────────────────────────────────────────────────────────────
+  let wash: WashSel = null;
+  if (find('no_wash')) {
+    wash = 'no_wash';
+  } else if (find('hand_wash')) {
+    const sub = find('hand_wash')?.subclass ?? '';
+    if      (sub.includes('40') && sub.includes('약') && sub.includes('중성')) wash = 'h40gn';
+    else if (sub.includes('30') && sub.includes('약') && sub.includes('중성')) wash = 'h30gn';
+    else if (sub.includes('40') && sub.includes('중성'))                       wash = 'h40n';
+    else if (sub.includes('30') && sub.includes('중성'))                       wash = 'h30n';
+    else if (sub.includes('40') && sub.includes('약'))                         wash = 'h40g';
+    else if (sub.includes('30') && sub.includes('약'))                         wash = 'h30g';
+    else if (sub.includes('40'))                                               wash = 'h40';
+    else                                                                       wash = 'h30';
+  } else if (find('machine_wash')) {
+    const sub = find('machine_wash')?.subclass ?? '';
+    if      (sub.includes('30') && sub.includes('약') && sub.includes('중성')) wash = 'm30gn';
+    else if (sub.includes('30') && sub.includes('매우'))                       wash = 'm30vg';
+    else if (sub.includes('30') && sub.includes('약'))                         wash = 'm30g';
+    else if (sub.includes('40') && sub.includes('매우'))                       wash = 'm40vg';
+    else if (sub.includes('40') && sub.includes('약'))                         wash = 'm40g';
+    else if (sub.includes('50') && sub.includes('약'))                         wash = 'm50g';
+    else if (sub.includes('60') && sub.includes('약'))                         wash = 'm60g';
+    else if (sub.includes('95'))                                               wash = 'm95';
+    else if (sub.includes('70'))                                               wash = 'm70';
+    else if (sub.includes('60'))                                               wash = 'm60';
+    else if (sub.includes('50'))                                               wash = 'm50';
+    else if (sub.includes('40'))                                               wash = 'm40';
+    else if (sub.includes('30'))                                               wash = 'm30';
+    else                                                                       wash = 'm40';
+  }
+
+  // ── 표백 ──────────────────────────────────────────────────────────────────
+  let bleach: BleachSel = null;
+  if (find('no_bleach')) {
+    const sub = find('no_bleach')?.subclass ?? '';
+    // 산소계만 단독 언급 시 ox_no, 나머지(염소, 염소+산소, 표백금지)는 cl_no
+    bleach = (sub.includes('산소') && !sub.includes('염소')) ? 'ox_no' : 'cl_no';
+  } else if (find('bleach')) {
+    const sub = find('bleach')?.subclass ?? '';
+    bleach = (sub.includes('산소') && !sub.includes('염소')) ? 'ox_ok' : 'cl_ok';
+  }
+
+  // ── 건조기 ────────────────────────────────────────────────────────────────
+  let machine_dry: MachineDry = null;
+  if (find('no_tumble_dry')) {
+    machine_dry = 'no';
+  } else if (find('tumble_dry')) {
+    const sub = find('tumble_dry')?.subclass ?? '';
+    machine_dry = sub.includes('80') ? 'ok_80' : 'ok_60';
+  }
+
+  // ── 자연건조 ──────────────────────────────────────────────────────────────
+  let natural_dry: NaturalDry = null;
+  if (find('natural_dry')) {
+    const sub = find('natural_dry')?.subclass ?? '';
+    const hasFlat   = sub.includes('뉘') || sub.includes('눕') || sub.includes('평');
+    const hasHanger = sub.includes('옷걸') || sub.includes('걸어');
+    const hasSun    = sub.includes('햇빛') || sub.includes('햇볕');
+
+    if      (hasFlat && hasSun)    natural_dry = 'flat_sun';
+    else if (hasFlat)              natural_dry = 'flat_shade';
+    else if (hasHanger && hasSun)  natural_dry = 'hang_sun';
+    else if (hasSun)               natural_dry = 'hang_sun';   // "햇빛 건조"
+    else                           natural_dry = 'hang_shade'; // "그늘 건조", 옷걸이 그늘, default
+  }
+
+  // ── 다림질 ────────────────────────────────────────────────────────────────
+  let iron: IronSel = null;
+  if (find('no_iron')) {
+    iron = 'no';
+  } else if (find('iron')) {
+    const sub = find('iron')?.subclass ?? '';
+    if      (sub.includes('고온') || sub.includes('210')) iron = 'high';
+    else if (sub.includes('저온') || sub.includes('120')) iron = 'low';
+    else                                                  iron = 'mid'; // 중온 or default
+  }
+
+  // ── 드라이클리닝 ──────────────────────────────────────────────────────────
+  let dryclean: DryCleanSel = null;
+  if (find('no_dry_clean')) {
+    dryclean = 'no';
+  } else if (find('dry_clean')) {
+    const sub = find('dry_clean')?.subclass ?? '';
+    if      (sub.includes('석유') || sub.includes('메테인')) dryclean = 'petroleum';
+    else if (sub.includes('실리콘'))                         dryclean = 'silicone';
+    else if (sub.includes('전문'))                           dryclean = 'special';
+    else                                                     dryclean = 'ok';
+  }
+
+  // ── 탈수 ──────────────────────────────────────────────────────────────────
+  let squeeze: SqueezeSel = null;
+  if      (find('no_squeeze')) squeeze = 'no';
+  else if (find('squeeze'))    squeeze = 'ok';
+
+  return { wash, bleach, machine_dry, natural_dry, iron, dryclean, squeeze };
 }
 
 // ─── 가이드 행 생성 ────────────────────────────────────────────────────────────
