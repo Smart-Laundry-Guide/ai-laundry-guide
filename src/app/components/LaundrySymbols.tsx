@@ -1,3 +1,5 @@
+import React from 'react';
+
 // ─── 공통 세탁 기호 SVG 컴포넌트 ─────────────────────────────────────────────
 // symbol_code 체계:
 //   wash_30 / wash_40 / wash_60 / wash_95 / wash_no
@@ -366,4 +368,63 @@ export function SymbolIcon({ code, className = 'w-full h-full' }: { code: string
   );
 
   return null;
+}
+
+// ── 세탁기 세탁 파라메트릭 아이콘 ──────────────────────────────────────────────
+// viewBox 0 0 40 48: 아랫 공간에 밑줄(약/매우) 표기
+export function MachineWashIcon({
+  temp, gentle, veryGentle, neutral, className = 'w-full h-full',
+}: {
+  temp: number; gentle?: boolean; veryGentle?: boolean; neutral?: boolean; className?: string;
+}) {
+  return (
+    <svg viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <rect x="4" y="3" width="32" height="27" rx="2" stroke={S} strokeWidth={SW} fill="none"/>
+      <circle cx="29" cy="10" r="2.5" stroke={S} strokeWidth="1.6" fill="none"/>
+      {neutral ? (
+        <>
+          <text x="20" y="18" textAnchor="middle" fontSize="10" fontWeight="800" fill={S} fontFamily="system-ui,sans-serif">{temp}℃</text>
+          <text x="20" y="26" textAnchor="middle" fontSize="7" fontWeight="700" fill={S} fontFamily="system-ui,sans-serif">중성</text>
+        </>
+      ) : (
+        <text x="20" y="22" textAnchor="middle" fontSize="11" fontWeight="800" fill={S} fontFamily="system-ui,sans-serif">{temp}℃</text>
+      )}
+      {(gentle || veryGentle) && (
+        <line x1="5" y1={veryGentle ? 34 : 36} x2="35" y2={veryGentle ? 34 : 36} stroke={S} strokeWidth="2.2" strokeLinecap="round"/>
+      )}
+      {veryGentle && (
+        <line x1="5" y1="39" x2="35" y2="39" stroke={S} strokeWidth="2.2" strokeLinecap="round"/>
+      )}
+    </svg>
+  );
+}
+
+// ── 손세탁 파라메트릭 아이콘 ─────────────────────────────────────────────────
+// 기존 TUB보다 작은 대야 (viewBox 0 0 40 48 기준)
+const TUB_HAND = 'M4,5 L8,27 Q8,31 12.5,31 L27.5,31 Q32,31 32,27 L36,5';
+
+export function HandWashIcon({
+  temp, gentle, veryGentle, neutral, className = 'w-full h-full',
+}: {
+  temp: number; gentle?: boolean; veryGentle?: boolean; neutral?: boolean; className?: string;
+}) {
+  return (
+    <svg viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <path d={TUB_HAND} stroke={S} strokeWidth={SW} fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      {neutral ? (
+        <>
+          <text x="20" y="18" textAnchor="middle" fontSize="10" fontWeight="800" fill={S} fontFamily="system-ui,sans-serif">{temp}℃</text>
+          <text x="20" y="26" textAnchor="middle" fontSize="7" fontWeight="700" fill={S} fontFamily="system-ui,sans-serif">중성</text>
+        </>
+      ) : (
+        <text x="20" y="22" textAnchor="middle" fontSize="11" fontWeight="800" fill={S} fontFamily="system-ui,sans-serif">{temp}℃</text>
+      )}
+      {(gentle || veryGentle) && (
+        <line x1="5" y1={veryGentle ? 34 : 36} x2="35" y2={veryGentle ? 34 : 36} stroke={S} strokeWidth="2.2" strokeLinecap="round"/>
+      )}
+      {veryGentle && (
+        <line x1="5" y1="39" x2="35" y2="39" stroke={S} strokeWidth="2.2" strokeLinecap="round"/>
+      )}
+    </svg>
+  );
 }
