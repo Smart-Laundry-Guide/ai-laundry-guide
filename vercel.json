@@ -1,8 +1,12 @@
 {
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "http://134.185.127.17:8000/:path*"
+      "source": "/api/chat",
+      "destination": "http://134.185.127.17:8000/api/chat"
+    },
+    {
+      "source": "/api/analyze",
+      "destination": "http://134.185.127.17:8000/analyze"
     }
   ]
 }
