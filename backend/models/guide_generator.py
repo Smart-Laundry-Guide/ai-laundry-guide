@@ -78,6 +78,14 @@ SYMBOL_SUMMARY_TEXT = {
 # 4. OCR 텍스트 기반 subclass 추론
 # =========================================================
 
+def _contains_all(text, keywords):
+    return all(keyword in text for keyword in keywords)
+
+
+def _contains_any(text, keywords):
+    return any(keyword in text for keyword in keywords)
+
+
 def infer_symbol_subclass(symbol_cls, ocr_text):
     """
     YOLO class + OCR text를 이용해 subclass를 확정합니다.
@@ -92,60 +100,124 @@ def infer_symbol_subclass(symbol_cls, ocr_text):
     if not text:
         return None
 
-    # machine_wash
+    # =====================================================
+    # 1. machine_wash
+    # =====================================================
     if symbol_cls == "machine_wash":
+        # 복합 조건 먼저 판단
+        if _contains_all(text, ["30", "약", "중성"]):
+            return "30°C 약하게 세탁 (중성세제)"
+        if _contains_all(text, ["30", "매우"]):
+            return "30°C 매우 약하게 세탁"
+        if _contains_all(text, ["30", "약"]):
+            return "30°C 약하게 세탁"
+
+        if _contains_all(text, ["40", "매우"]):
+            return "40°C 매우 약하게 세탁"
+        if _contains_all(text, ["40", "약"]):
+            return "40°C 약하게 세탁"
+
+        if _contains_all(text, ["50", "약"]):
+            return "50°C 약하게 세탁"
+
+        if _contains_all(text, ["60", "약"]):
+            return "60°C 약하게 세탁"
+
+        # 온도만 있는 경우
         if "95" in text:
-            return "일반 세탁 (95℃)"
+            return "95°C 일반 세탁"
+        if "70" in text:
+            return "70°C 일반 세탁"
         if "60" in text:
-            return "일반 세탁 (60℃)"
-        if "40" in text or "50" in text:
-            return "일반 세탁 (40℃~50℃)"
-        if "30" in text:
-            return "일반 세탁 (30℃ 이하)"
-        return None
-
-    # hand_wash
-    if symbol_cls == "hand_wash":
-        if "중성" in text:
-            return "약하게 손세탁 (중성세제)"
+            return "60°C 일반 세탁"
+        if "50" in text:
+            return "50°C 일반 세탁"
         if "40" in text:
-            return "손세탁 (40℃)"
+            return "40°C 일반 세탁"
         if "30" in text:
-            return "손세탁 (30℃)"
+            return "30°C 일반 세탁"
+
         return None
 
-    # bleach
+    # =====================================================
+    # 2. hand_wash
+    # =====================================================
+    if symbol_cls == "hand_wash":
+        if _contains_all(text, ["40", "약", "중성"]):
+            return "40°C 중성세제로 약하게 손세탁"
+        if _contains_all(text, ["30", "약", "중성"]):
+            return "30°C 중성세제로 약하게 손세탁"
+
+        if _contains_all(text, ["40", "중성"]):
+            return "40°C 중성세제로 손세탁"
+        if _contains_all(text, ["30", "중성"]):
+            return "30°C 중성세제로 손세탁"
+
+        if _contains_all(text, ["40", "약"]):
+            return "40°C 약하게 손세탁"
+        if _contains_all(text, ["30", "약"]):
+            return "30°C 약하게 손세탁"
+
+        if "40" in text:
+            return "40°C 손세탁"
+        if "30" in text:
+            return "30°C 손세탁"
+
+        return None
+
+    # =====================================================
+    # 3. bleach
+    # =====================================================
     if symbol_cls == "bleach":
+        if _contains_all(text, ["염소", "산소"]):
+            return "염소·산소계 표백 가능"
         if "염소" in text:
-            return "염소계 표백"
+            return "염소계 표백 가능"
         if "산소" in text:
-            return "산소계 표백"
+            return "산소계 표백 가능"
+
         return None
 
-    # no_bleach
+    # =====================================================
+    # 4. no_bleach
+    # =====================================================
     if symbol_cls == "no_bleach":
+        if _contains_all(text, ["염소", "산소"]):
+            return "염소·산소계 표백 금지"
         if "염소" in text:
             return "염소계 표백 금지"
         if "산소" in text:
             return "산소계 표백 금지"
         if "표백" in text:
             return "표백 금지"
+
         return None
 
-    # tumble_dry
+    # =====================================================
+    # 5. tumble_dry
+    # =====================================================
     if symbol_cls == "tumble_dry":
-        if "60" in text:
-            return "건조기 사용 가능 (60℃ 이하)"
         if "80" in text:
-            return "건조기 사용 가능 (80℃ 이하)"
+            return "80℃ 이하 기계건조"
+        if "60" in text:
+            return "60℃ 이하 기계건조"
+
         return None
 
-    # natural_dry
+    # =====================================================
+    # 6. natural_dry
+    # =====================================================
     if symbol_cls == "natural_dry":
         has_flat = "뉘" in text or "눕" in text or "평" in text
         has_hanger = "옷걸" in text or "걸어" in text
         has_sun = "햇빛" in text or "햇볕" in text
         has_shade = "그늘" in text
+        has_no_spin = "비탈수" in text or "탈수없이" in text
+
+        if has_flat and has_no_spin:
+            return "탈수 없이 뉘어서 그늘 건조"
+        if has_hanger and has_no_spin:
+            return "탈수 없이 옷걸이 그늘 건조"
 
         if has_flat and has_sun:
             return "뉘어서 햇빛 건조"
@@ -156,19 +228,33 @@ def infer_symbol_subclass(symbol_cls, ocr_text):
         if has_hanger and has_shade:
             return "옷걸이에 걸어 그늘 건조"
 
+        if has_flat:
+            return "뉘어서 그늘 건조"
+        if has_hanger:
+            return "옷걸이에 걸어 그늘 건조"
+        if has_shade:
+            return "그늘 건조"
+        if has_sun:
+            return "햇빛 건조"
+
         return None
 
-    # iron
+    # =====================================================
+    # 7. iron
+    # =====================================================
     if symbol_cls == "iron":
-        if "저온" in text or "120" in text:
-            return "저온 다림질 (120℃)"
-        if "중온" in text or "160" in text:
-            return "중온 다림질 (160℃)"
-        if "고온" in text or "210" in text:
-            return "고온 다림질 (210℃)"
+        if "3" in text or "210" in text or "고온" in text:
+            return "고온 다림질 (210℃ 이하)"
+        if "2" in text or "160" in text or "중온" in text:
+            return "중온 다림질 (160℃ 이하)"
+        if "1" in text or "120" in text or "저온" in text:
+            return "저온 다림질 (120℃ 이하)"
+
         return None
 
-    # dry_clean
+    # =====================================================
+    # 8. dry_clean
+    # =====================================================
     if symbol_cls == "dry_clean":
         if "석유" in text:
             return "석유계 드라이클리닝"
@@ -176,17 +262,25 @@ def infer_symbol_subclass(symbol_cls, ocr_text):
             return "메테인계 드라이클리닝"
         if "실리콘" in text:
             return "실리콘계 드라이클리닝"
+        if "전문" in text:
+            return "특수 전문점 드라이클리닝"
         if "드라이" in text:
             return "드라이클리닝"
+
         return None
 
-    # squeeze
+    # =====================================================
+    # 9. squeeze
+    # =====================================================
     if symbol_cls == "squeeze":
         if "약" in text or "짜" in text:
             return "약하게 짜기"
+
         return None
 
-    # 아래 클래스들은 api_spec_final.json에서 subclass 예시가 null
+    # =====================================================
+    # 10. subclass가 없는 금지/주의 계열
+    # =====================================================
     if symbol_cls in [
         "no_wash",
         "no_tumble_dry",
