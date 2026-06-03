@@ -100,13 +100,11 @@ export async function analyzeClothing(
   req: AnalysisRequest
 ): Promise<AnalysisApiResponse> {
 
-  // ── 실제 API 호출 (연동 시 아래 블록 주석 해제) ────────────────────────────
   const formData = new FormData();
   formData.append('labelType', req.labelType ?? 'none');
 
   if (req.clothingImage) {
     if (req.clothingImage instanceof File) {
-      // ✅ 압축 적용
       const compressedClothing = await compressImage(req.clothingImage);
       formData.append('clothingImage', compressedClothing);
     } else if (typeof req.clothingImage === 'string') {
@@ -118,7 +116,6 @@ export async function analyzeClothing(
 
   if (req.labelImage) {
     if (req.labelImage instanceof File) {
-      // ✅ 압축 적용 (이게 제일 중요합니다!)
       const compressedLabel = await compressImage(req.labelImage);
       formData.append('labelImage', compressedLabel);
     } else if (typeof req.labelImage === 'string') {
@@ -128,7 +125,7 @@ export async function analyzeClothing(
     }
   }
 
-  const response = await fetch('/api/analyze', {
+  const response = await fetch('https://establish-eloquent-refurnish.ngrok-free.dev/analyze', {
     method: 'POST',
     body: formData,
   });

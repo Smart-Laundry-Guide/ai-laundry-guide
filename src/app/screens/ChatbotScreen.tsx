@@ -14,11 +14,6 @@ const QUICK_QUESTIONS = [
   "드라이클리닝 꼭 해야 해?",
 ];
 
-// ── 백엔드 URL (환경변수 또는 기본값) ─────────────────────────────────────────
-const API_BASE =
-  ((import.meta as any).env.VITE_API_BASE_URL as string | undefined) ??
-  "/api";
-
 export function ChatbotScreen() {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -64,7 +59,7 @@ export function ChatbotScreen() {
     setIsLoading(true);
 
     try {
-      const res = await fetch(`/api/chat`, {
+      const res = await fetch('https://establish-eloquent-refurnish.ngrok-free.dev/analyze', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
