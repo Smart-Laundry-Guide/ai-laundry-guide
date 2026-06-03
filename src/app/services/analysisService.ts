@@ -101,27 +101,27 @@ export async function analyzeClothing(
 ): Promise<AnalysisApiResponse> {
 
   const formData = new FormData();
-  formData.append('label_type', req.labelType ?? 'none');
+  formData.append('labelType', req.labelType ?? 'none');
 
   if (req.clothingImage) {
     if (req.clothingImage instanceof File) {
       const compressedClothing = await compressImage(req.clothingImage);
-      formData.append('file', compressedClothing);
+      formData.append('clothingImage', compressedClothing);
     } else if (typeof req.clothingImage === 'string') {
       const res = await fetch(req.clothingImage);
       const blob = await res.blob();
-      formData.append('file', blob, 'clothing_image.jpg');
+      formData.append('clothingImage', blob, 'clothing_image.jpg');
     }
   }
 
   if (req.labelImage) {
     if (req.labelImage instanceof File) {
       const compressedLabel = await compressImage(req.labelImage);
-      formData.append('label_file', compressedLabel);
+      formData.append('labelImage', compressedLabel);
     } else if (typeof req.labelImage === 'string') {
       const res = await fetch(req.labelImage);
       const blob = await res.blob();
-      formData.append('label_file', blob, 'label_image.jpg');
+      formData.append('labelImage', blob, 'label_image.jpg');
     }
   }
 
