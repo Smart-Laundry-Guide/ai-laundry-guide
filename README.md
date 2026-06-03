@@ -101,12 +101,11 @@ npm run build
 ## 백엔드 연동
 
 분석 요청은 `src/app/services/analysisService.ts`에서 관리합니다.
-현재 서비스는 HTTPS(Vercel)와 HTTP(Oracle Cloud) 간의 Mixed Content 에러를 방지하기 위해 Vercel Proxy를 사용하고 있습니다.
 
-프론트엔드 코드 내의 기본 API 주소는 다음과 같이 `/api`로 설정됩니다.
+현재 분석 API 기본 주소:
 
 ```ts
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '/api';
+const API_BASE_URL = 'http://localhost:8000';
 ```
 
 프론트엔드는 `POST /analyze` 엔드포인트로 이미지와 라벨 타입을 `FormData` 형식으로 전송합니다.
