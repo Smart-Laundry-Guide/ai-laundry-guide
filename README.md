@@ -1,132 +1,128 @@
-# 🧺 Laundry Care — 세탁 도우미 앱 (Frontend)
+# Laundry Care Frontend
 
-> AI 기반 세탁 라벨 해석 및 세탁 실수 방지 도우미 시스템의 프론트엔드 레포지토리입니다.
+Laundry Care의 프론트엔드 애플리케이션입니다. 의류 사진과 세탁 라벨 정보를 기반으로 세탁 가이드를 확인하고, 세탁 기록과 오염 제거 정보를 탐색할 수 있는 화면을 제공합니다.
 
-<br>
+## 주요 기능
 
-## 📌 프로젝트 소개
+- 홈 화면에서 주요 기능 진입
+- 의류 및 세탁 라벨 이미지 촬영/업로드
+- 분석 진행 상태를 보여주는 로딩 화면
+- 의류 분류, 세탁 기호, OCR 결과 기반 분석 결과 표시
+- 세탁 방법 상세 가이드 제공
+- 세탁 기록 저장 및 조회
+- 오염 종류별 제거 방법 안내
+- 세탁 관련 질문을 위한 챗봇 화면 제공
 
-**Laundry Care**는 옷 사진 또는 세탁 라벨 사진을 업로드하면 AI가 의류 종류를 분류하고, 세탁 기호를 인식하여 맞춤형 세탁 가이드를 제공하는 모바일 웹 애플리케이션입니다.
+## 기술 스택
 
-- 의류 분류 모델(EfficientNet-B0)이 사진만으로 저·중·고위험군을 판별
-- PaddleOCR로 세탁 라벨 텍스트를 인식하여 세탁 방법·금지 사항·주의 문구를 추출
-- YOLOv11s로 세탁 기호를 탐지하여 기호별 가이드를 제공
-- 분석 기록을 로컬 저장소에 보관하고 종류·기간별 필터로 조회
+- React
+- TypeScript
+- Vite
+- React Router
+- Tailwind CSS
+- Material UI
+- Radix UI
+- lucide-react
 
-<br>
+## 프로젝트 구조
 
-## ✨ 주요 기능
-
-| 화면 | 기능 |
-|---|---|
-| 홈 | 세탁 전 체크리스트, 기능 메뉴 진입 |
-| 사진 업로드 | 카메라 촬영 또는 갤러리 선택, 세탁 라벨 추가 |
-| 분석 결과 | 의류 종류·위험군·세탁 가이드, Top-2 후보 선택 |
-| 분석 기록 | localStorage 기반 저장, 검색·필터 |
-| 세탁 기호 사전 | 기호별 의미 안내 |
-| 얼룩 제거 | 상황별 얼룩 제거법 가이드 |
-| AI 챗봇 | 세탁 관련 질의응답 |
-
-<br>
-
-## 🛠 기술 스택
-
-| 분류 | 사용 기술 |
-|---|---|
-| 프레임워크 | React 18 + Vite 6 |
-| 라우팅 | React Router 7 |
-| 스타일링 | Tailwind CSS 4 |
-| UI 컴포넌트 | shadcn/ui, Radix UI |
-| 아이콘 | Lucide React |
-| 상태 저장 | localStorage |
-| 패키지 매니저 | npm |
-
-<br>
-
-## 🗂 폴더 구조
-
-```
-src/
-└── app/
-    ├── components/
-    │   ├── BottomNav.tsx       # 하단 네비게이션
-    │   └── ui/                 # shadcn/ui 공통 컴포넌트
-    ├── screens/
-    │   ├── HomeScreen.tsx      # 홈
-    │   ├── CameraScreen.tsx    # 사진 업로드 (카메라/갤러리)
-    │   ├── LoadingScreen.tsx   # 분석 중
-    │   ├── ResultScreen.tsx    # 세탁 가이드 결과
-    │   ├── HistoryScreen.tsx   # 분석 기록
-    │   ├── GuideScreen.tsx     # 세탁 기호 사전
-    │   ├── StainRemoveScreen.tsx # 얼룩 제거 가이드
-    │   └── ChatbotScreen.tsx   # AI 챗봇
-    ├── App.tsx                 # 스플래시 화면 + 라우터
-    └── routes.tsx              # 라우트 정의
+```text
+frontend/
+├── src/
+│   ├── main.tsx
+│   ├── app/
+│   │   ├── App.tsx
+│   │   ├── routes.tsx
+│   │   ├── components/
+│   │   │   ├── BottomNav.tsx
+│   │   │   ├── LaundrySymbols.tsx
+│   │   │   └── ui/
+│   │   ├── screens/
+│   │   │   ├── HomeScreen.tsx
+│   │   │   ├── CameraScreen.tsx
+│   │   │   ├── LoadingScreen.tsx
+│   │   │   ├── ResultScreen.tsx
+│   │   │   ├── GuideScreen.tsx
+│   │   │   ├── HistoryScreen.tsx
+│   │   │   ├── StainRemoveScreen.tsx
+│   │   │   └── ChatbotScreen.tsx
+│   │   ├── services/
+│   │   │   ├── analysisService.ts
+│   │   │   ├── chatService.ts
+│   │   │   └── config.ts
+│   │   └── utils/
+│   │       └── imageUtils.ts
+│   └── styles/
+│       ├── index.css
+│       ├── tailwind.css
+│       └── theme.css
+├── index.html
+├── package.json
+└── vite.config.ts
 ```
 
-<br>
+## 화면 구성
 
-## ⚙️ 실행 방법
+| 경로 | 화면 | 설명 |
+| --- | --- | --- |
+| `/` | HomeScreen | 앱 시작 화면 및 주요 기능 진입 |
+| `/camera` | CameraScreen | 의류/라벨 이미지 촬영 또는 업로드 |
+| `/loading` | LoadingScreen | 분석 진행 상태 표시 |
+| `/result` | ResultScreen | 분석 결과와 세탁 요약 표시 |
+| `/guide` | GuideScreen | 세탁 기호별 상세 가이드 |
+| `/history` | HistoryScreen | 저장된 분석 기록 조회 |
+| `/stain` | StainRemovalScreen | 얼룩 제거 방법 안내 |
+| `/chatbot` | ChatbotScreen | 세탁 관련 챗봇 화면 |
+
+## 실행 방법
+
+### 1. 의존성 설치
 
 ```bash
-# 패키지 설치
 npm install
+```
 
-# 개발 서버 실행
+### 2. 개발 서버 실행
+
+```bash
 npm run dev
+```
 
-# 빌드
+Vite 개발 서버가 실행되면 터미널에 표시되는 로컬 주소로 접속합니다.
+
+### 3. 프로덕션 빌드
+
+```bash
 npm run build
 ```
 
-> 개발 서버는 기본적으로 `http://localhost:5173` 에서 실행됩니다.
+빌드 결과물은 `dist/` 폴더에 생성됩니다.
 
-<br>
+## 백엔드 연동
 
-## 🔗 백엔드 연동 구조
+분석 요청은 `src/app/services/analysisService.ts`에서 관리합니다.
+현재 서비스는 HTTPS(Vercel)와 HTTP(Oracle Cloud) 간의 Mixed Content 에러를 방지하기 위해 Vercel Proxy를 사용하고 있습니다.
 
-현재 프론트엔드는 목업 데이터로 동작합니다. FastAPI 백엔드 연동 시 아래 흐름으로 API를 호출합니다.
+프론트엔드 코드 내의 기본 API 주소는 다음과 같이 `/api`로 설정됩니다.
 
-```
-사진 업로드 (CameraScreen)
-    ↓
-POST /analyze  (FormData: clothing_image, label_image?)
-    ↓  FastAPI
-EfficientNet-B0  +  YOLOv11s  +  PaddleOCR
-    ↓
-JSON 응답: { topCandidates, symbols, ocrResult, lowConfidence }
-    ↓
-결과 화면 (ResultScreen)
+```ts
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '/api';
 ```
 
-응답 데이터는 `LoadingScreen → ResultScreen` 으로 `location.state`를 통해 전달됩니다.
+프론트엔드는 `POST /analyze` 엔드포인트로 이미지와 라벨 타입을 `FormData` 형식으로 전송합니다.
 
-<br>
+요청 필드:
 
-## 🗺 화면 흐름
+- `labelType`: `symbol`, `ocr`, `none`
+- `clothingImage`: 의류 이미지
+- `labelImage`: 세탁 라벨 이미지
 
-```
-홈 (/)
- ├─ 사진 업로드 (/camera)
- │   └─ 분석 중 (/loading)
- │       └─ 결과 (/result)
- │           └─ 분석 기록 (/history)
- ├─ 세탁 기호 사전 (/guide)
- ├─ AI 챗봇 (/chatbot)
- ├─ 지난 분석 (/history)
- └─ 얼룩 제거 (/stain)
-```
+서버 주소가 변경되면 `API_BASE_URL` 값을 수정하면 됩니다.
 
-<br>
+## 개발 참고
 
-## 📋 위험군 분류 기준
-
-의류 분류 모델(EfficientNet-B0 v4)의 9개 클래스에 대해 아래 위험군 기준을 적용합니다.
-
-| 위험군 | 클래스 | 세탁 가이드 요약 |
-|---|---|---|
-| 🔴 고위험군 | knit, blouse, jacket | 손세탁 또는 드라이클리닝 권장 |
-| 🟡 중위험군 | T_shirt, shirt, dress, skirt | 30°C 이하 약한 세탁 |
-| 🟢 저위험군 | denim, pants | 일반 세탁 가능 |
-
-<br>
+- 공통 하단 네비게이션은 `src/app/components/BottomNav.tsx`에서 관리합니다.
+- 세탁 기호 UI는 `src/app/components/LaundrySymbols.tsx`에 정리되어 있습니다.
+- 분석 결과 화면의 세탁 요약 생성 로직은 `src/app/screens/ResultScreen.tsx`에 있습니다.
+- 기록 저장/조회 로직은 `src/app/screens/HistoryScreen.tsx`에서 관리합니다.
+- 이미지 처리 유틸은 `src/app/utils/imageUtils.ts`에 있습니다.

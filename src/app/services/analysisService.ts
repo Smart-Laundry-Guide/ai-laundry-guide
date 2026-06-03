@@ -10,8 +10,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── 1. API 엔드포인트 설정 ────────────────────────────────────────────────────
-// TODO: 실제 서버 주소로 교체하세요
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = '/api';
 
 // ── 2. 요청 타입 ──────────────────────────────────────────────────────────────
 export interface AnalysisRequest {
@@ -107,7 +106,9 @@ export async function analyzeClothing(
 
   if (req.clothingImage) {
     if (req.clothingImage instanceof File) {
-      formData.append('clothingImage', req.clothingImage);
+      // ✅ 압축 적용
+      const compressedClothing = await compressImage(req.clothingImage);
+      formData.append('clothingImage', compressedClothing);
     } else if (typeof req.clothingImage === 'string') {
       const res = await fetch(req.clothingImage);
       const blob = await res.blob();
@@ -117,7 +118,9 @@ export async function analyzeClothing(
 
   if (req.labelImage) {
     if (req.labelImage instanceof File) {
-      formData.append('labelImage', req.labelImage);
+      // ✅ 압축 적용 (이게 제일 중요합니다!)
+      const compressedLabel = await compressImage(req.labelImage);
+      formData.append('labelImage', compressedLabel);
     } else if (typeof req.labelImage === 'string') {
       const res = await fetch(req.labelImage);
       const blob = await res.blob();
@@ -125,10 +128,9 @@ export async function analyzeClothing(
     }
   }
 
-  const response = await fetch(`${API_BASE_URL}/analyze`, {
+  const response = await fetch('/api/analyze', {
     method: 'POST',
     body: formData,
-    // headers: { 'Authorization': `Bearer YOUR_TOKEN` },  // 인증 필요 시 추가
   });
 
   if (!response.ok) {
@@ -136,13 +138,39 @@ export async function analyzeClothing(
   }
 
   const jsonResponse = await response.json();
-  // ⭐️ 이 줄을 추가해서 서버의 진짜 응답을 확인해 보세요!
-  console.log("백엔드가 준 찐 데이터:", jsonResponse);
-  return jsonResponse.data as AnalysisApiResponse;
+  console.log("백엔드가 준 데이터:", jsonResponse);
 
-  // ── 목(Mock) 응답 반환 — 연동 후 이 블록을 제거하세요 ──────────────────────
-  await new Promise(r => setTimeout(r, 200)); // 네트워크 지연 시뮬레이션
-  if (req.labelType === 'symbol') return MOCK_SYMBOL;
-  if (req.labelType === 'ocr')    return MOCK_OCR;
-  return MOCK_CLOTHING;
+  return jsonResponse.data as AnalysisApiResponse;
 }
+
+// ── [추가] 10초 타임아웃 방지용 이미지 강제 압축 함수 ─────────────────────────
+const compressImage = async (file: File): Promise<File> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        // 가로 길이를 600px로 확 줄여버립니다 (서버 연산 속도 폭발적 증가)
+        const MAX_WIDTH = 600; 
+        const scaleSize = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scaleSize;
+
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        // 화질을 60%로 깎아서 JPEG로 변환
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+          } else {
+            resolve(file); // 압축 실패 시 원본 그대로 반환
+          }
+        }, 'image/jpeg', 0.6); 
+      };
+    };
+  });
+};

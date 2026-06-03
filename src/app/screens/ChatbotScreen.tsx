@@ -16,8 +16,8 @@ const QUICK_QUESTIONS = [
 
 // ── 백엔드 URL (환경변수 또는 기본값) ─────────────────────────────────────────
 const API_BASE =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
-  "http://localhost:8000";
+  ((import.meta as any).env.VITE_API_BASE_URL as string | undefined) ??
+  "/api";
 
 export function ChatbotScreen() {
   const [messages, setMessages] = useState<Message[]>([
@@ -64,7 +64,7 @@ export function ChatbotScreen() {
     setIsLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE}/api/chat`, {
+      const res = await fetch(`/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
