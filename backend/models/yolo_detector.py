@@ -14,27 +14,32 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 # LAUNDRY-GUIDE/model_weights/symbol_detector/best.pt
 MODEL_PATH = ROOT_DIR / "model_weights" / "symbol_detector" / "best.pt"
 
+# 서버가 시작될 때(import 될 때) 즉시 모델을 로드
+if not MODEL_PATH.exists():
+    raise FileNotFoundError(f"YOLO 모델 파일을 찾을 수 없습니다: {MODEL_PATH}")
 
-_yolo_model = None
+print(f"🚀 YOLO 모델 로딩 시작: {MODEL_PATH}")
+# 전역 변수로 모델을 미리 선언해버립니다.
+_yolo_model = YOLO(str(MODEL_PATH))
+print("✅ YOLO 모델 로딩 완료!")
 
+# def _load_yolo_model():
+#     """
+#     YOLO 모델을 한 번만 로드해서 재사용합니다.
+#     """
 
-def _load_yolo_model():
-    """
-    YOLO 모델을 한 번만 로드해서 재사용합니다.
-    """
+#     global _yolo_model
 
-    global _yolo_model
+#     if _yolo_model is not None:
+#         return _yolo_model
 
-    if _yolo_model is not None:
-        return _yolo_model
+#     if not MODEL_PATH.exists():
+#         raise FileNotFoundError(
+#             f"YOLO 모델 파일을 찾을 수 없습니다: {MODEL_PATH}"
+#         )
 
-    if not MODEL_PATH.exists():
-        raise FileNotFoundError(
-            f"YOLO 모델 파일을 찾을 수 없습니다: {MODEL_PATH}"
-        )
-
-    _yolo_model = YOLO(str(MODEL_PATH))
-    return _yolo_model
+#     _yolo_model = YOLO(str(MODEL_PATH))
+#     return _yolo_model
 
 
 def _bytes_to_numpy_rgb(image_bytes):
@@ -64,10 +69,13 @@ def detect_symbols(label_bytes, conf_threshold=0.25):
     최종 JSON에는 crop을 넣으면 안 됩니다.
     """
 
-    model = _load_yolo_model()
+    # model = _load_yolo_model()
     image_np = _bytes_to_numpy_rgb(label_bytes)
 
-    results = model(image_np, conf=conf_threshold)
+    # results = model(image_np, conf=conf_threshold)
+
+    # _yolo_model 사용
+    results = _yolo_model(image_np, conf=conf_threshold)
 
     detected_symbols = []
 
