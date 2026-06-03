@@ -59,9 +59,12 @@ export function ChatbotScreen() {
     setIsLoading(true);
 
     try {
-      const res = await fetch('https://establish-eloquent-refurnish.ngrok-free.dev/analyze', {
+      const res = await fetch('https://establish-eloquent-refurnish.ngrok-free.dev/api/chat', {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "69420"
+        },
         body: JSON.stringify({
           // assistant 첫 인사 메시지는 API로 보내지 않음
           messages: history.filter((m) => !(m.role === "assistant" && history.indexOf(m) === 0)),
