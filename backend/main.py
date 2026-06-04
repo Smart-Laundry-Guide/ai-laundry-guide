@@ -1,6 +1,7 @@
 ﻿from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from services.database import init_db, save_record, get_all_records
+from pipeline import run_pipeline
 from pydantic import BaseModel
 from services.chatbot import get_chatgpt_response
 import os
@@ -23,6 +24,17 @@ app.add_middleware(
 async def startup_event():
     init_db()  # 서버 시작 시 DB 테이블 자동 생성
     os.makedirs("temp_images", exist_ok=True) # 이미지 저장 폴더 생성
+
+    # [피드백 적용] AI 모델 미리 로드 (콜드스타트 방지)
+    print("서버 부팅 중: AI 모델을 메모리에 미리 적재")
+    try:
+        # pipeline.py에서 사용하는 무거운 모델들을 서버 시작 시 강제로 참조하여 메모리에 올립니다.
+        from models.efficientnet_classifier import predict_clothing
+        from models.yolo_detector import detect_symbols
+        from models.ocr_extractor import extract_symbol_text, extract_caution_text
+        print("AI 모델 로딩 완료")
+    except Exception as e:
+        print(f"모델 로드 중 경고 (앱은 정상 작동): {e}")
 
 # 1. POST /analyze
 @app.post("/analyze")
