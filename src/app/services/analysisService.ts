@@ -125,10 +125,9 @@ export async function analyzeClothing(
     }
   }
 
-  const response = await fetch('https://establish-eloquent-refurnish.ngrok-free.dev/analyze', {
+  const response = await fetch('https://laundry-care.duckdns.org/analyze', {
     method: 'POST',
     headers: {
-      "ngrok-skip-browser-warning": "69420"
     },
     body: formData,
   });

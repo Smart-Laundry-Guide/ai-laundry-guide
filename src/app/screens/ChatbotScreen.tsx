@@ -59,11 +59,10 @@ export function ChatbotScreen() {
     setIsLoading(true);
 
     try {
-      const res = await fetch('https://establish-eloquent-refurnish.ngrok-free.dev/api/chat', {
+      const res = await fetch('https://laundry-care.duckdns.org/api/chat', {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "69420"
         },
         body: JSON.stringify({
           // assistant 첫 인사 메시지는 API로 보내지 않음
