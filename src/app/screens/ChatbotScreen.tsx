@@ -59,7 +59,7 @@ export function ChatbotScreen() {
     setIsLoading(true);
 
     try {
-      const res = await fetch('https://laundry-care.duckdns.org/api/chat', {
+      const res = await fetch('https://bsy52823-laundry-care.hf.space/api/chat', {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",

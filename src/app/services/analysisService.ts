@@ -125,7 +125,7 @@ export async function analyzeClothing(
     }
   }
 
-  const response = await fetch('https://laundry-care.duckdns.org/analyze', {
+  const response = await fetch('https://bsy52823-laundry-care.hf.space/analyze', {
     method: 'POST',
     headers: {
     },
