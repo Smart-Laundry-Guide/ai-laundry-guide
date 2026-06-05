@@ -2,12 +2,9 @@ import os
 from openai import OpenAI
 from dotenv import load_dotenv
 
-# .env 파일에서 OPENAI_API_KEY 읽어오기
+# 환경변수 로드 및 OpenAI 클라이언트 초기화
 load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-# OpenAI 클라이언트 초기화
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # 모바일 앱 환경에 맞게 페르소나 및 응답 규칙 강화
 system_prompt = """너는 친절하고 전문적인 세탁 도우미 AI야. 모바일 앱 챗봇 환경에 맞게 반드시 아래의 규칙을 엄격하게 지켜서 대답해.
@@ -26,15 +23,14 @@ def get_chatgpt_response(messages):
         if not messages:
             return "질문을 입력해주세요."
 
-        # 1. OpenAI에 보낼 메시지 리스트 준비 (시스템 프롬프트를 맨 앞에 'system' 역할로 추가)
+        # OpenAI에 보낼 메시지 리스트 준비 (시스템 프롬프트를 맨 앞에 'system' 역할로 추가)
         openai_messages = [{"role": "system", "content": system_prompt}]
         
-        # 2. 프론트엔드에서 온 메시지를 OpenAI 형식에 맞게 정리해서 추가
+        # 프론트엔드에서 온 메시지를 OpenAI 형식에 맞게 정리해서 추가
         for msg in messages:
             role = msg.get("role")
             content = msg.get("content", "")
             
-            # 프론트엔드의 역할이 'model'이었다면 OpenAI 스펙에 맞게 'assistant'로 변경
             openai_role = "assistant" if role in ["assistant", "model"] else "user"
             
             openai_messages.append({
@@ -42,16 +38,17 @@ def get_chatgpt_response(messages):
                 "content": content
             })
             
-        # 3. ChatGPT API 호출 (gpt-5.4-mini 모델 사용)
+        # ChatGPT API 호출 (gpt-5.4-mini 모델 사용)
         response = client.chat.completions.create(
             model="gpt-5.4-mini",
             messages=openai_messages,
-            temperature=0.7  # 너무 기계적이지 않고 자연스러운 말투를 위한 수치
+            temperature=0.7
         )
         
-        # 4. 생성된 답변 텍스트만 추출하여 반환
+        # 생성된 답변 텍스트만 추출하여 반환
         return response.choices[0].message.content
 
     except Exception as e:
-        print(f"Gemini API Error: {str(e)}")
+        # 디버깅을 위해 터미널 출력, 화면에는 안내 메시지 반환
+        print(f"OpenAI API Error: {str(e)}")
         return f"[오류] 챗봇 응답을 생성하는 중 문제가 발생했습니다: {str(e)}"

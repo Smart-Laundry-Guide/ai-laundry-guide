@@ -9,7 +9,7 @@ from PIL import Image
 
 # 현재 파일 위치:
 # LAUNDRY-GUIDE/backend/models/efficientnet_classifier.py
-ROOT_DIR = Path(__file__).resolve().parents[2]
+ROOT_DIR = Path(__file__).resolve().parents[1]
 
 # 모델 파일 위치:
 # LAUNDRY-GUIDE/model_weights/EfficientNet_B0_final.pth
@@ -19,8 +19,6 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 # final_efficientnet_b0.py 기준 5개 클래스
-# 학습 코드에서 ImageFolder(RAW_DIR)를 사용했기 때문에 보통 폴더명 정렬 순서입니다.
-# 팀원이 Colab 출력값 "클래스 순서:"를 알려주면 그 순서와 반드시 맞추세요.
 CLASS_NAMES = ["T_shirt", "denim", "knit", "pants", "shirt"]
 
 

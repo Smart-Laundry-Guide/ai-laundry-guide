@@ -27,7 +27,7 @@ except TypeError:
         enable_mkldnn=False
     )
 
-print("✅ OCR 모델 완벽하게 로딩 완료!")
+print("OCR 모델 로딩 완료")
 
 
 def _load_ocr():
@@ -36,26 +36,6 @@ def _load_ocr():
     """
 
     global _ocr
-
-    # if _ocr is not None:
-    #     return _ocr
-
-    # try:
-    #     # PaddleOCR 3.x 기준
-    #     _ocr = PaddleOCR(
-    #         lang="korean",
-    #         use_doc_orientation_classify=False,
-    #         use_doc_unwarping=False,
-    #         use_textline_orientation=False,
-    #         enable_mkldnn=False
-    #     )
-    # except TypeError:
-    #     # 혹시 버전 차이로 위 옵션이 안 먹을 때 대비
-    #     _ocr = PaddleOCR(
-    #         lang="korean",
-    #         enable_mkldnn=False
-    #     )
-
     return _ocr
 
 

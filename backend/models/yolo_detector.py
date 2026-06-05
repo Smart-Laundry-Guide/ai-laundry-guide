@@ -8,7 +8,7 @@ from ultralytics import YOLO
 
 # 현재 파일 위치:
 # LAUNDRY-GUIDE/backend/models/yolo_detector.py
-ROOT_DIR = Path(__file__).resolve().parents[2]
+ROOT_DIR = Path(__file__).resolve().parents[1]
 
 # YOLO 모델 파일 위치:
 # LAUNDRY-GUIDE/model_weights/symbol_detector/best.pt
@@ -18,29 +18,10 @@ MODEL_PATH = ROOT_DIR / "model_weights" / "symbol_detector" / "best.pt"
 if not MODEL_PATH.exists():
     raise FileNotFoundError(f"YOLO 모델 파일을 찾을 수 없습니다: {MODEL_PATH}")
 
-print(f"🚀 YOLO 모델 로딩 시작: {MODEL_PATH}")
+print(f"YOLO 모델 로딩 시작: {MODEL_PATH}")
 # 전역 변수로 모델을 미리 선언해버립니다.
 _yolo_model = YOLO(str(MODEL_PATH))
-print("✅ YOLO 모델 로딩 완료!")
-
-# def _load_yolo_model():
-#     """
-#     YOLO 모델을 한 번만 로드해서 재사용합니다.
-#     """
-
-#     global _yolo_model
-
-#     if _yolo_model is not None:
-#         return _yolo_model
-
-#     if not MODEL_PATH.exists():
-#         raise FileNotFoundError(
-#             f"YOLO 모델 파일을 찾을 수 없습니다: {MODEL_PATH}"
-#         )
-
-#     _yolo_model = YOLO(str(MODEL_PATH))
-#     return _yolo_model
-
+print("YOLO 모델 로딩 완료")
 
 def _bytes_to_numpy_rgb(image_bytes):
     """
